@@ -1,0 +1,36 @@
+
+ Kill one of multiple processes and theirs children for given local process ID or
+ other process information; kill one or multiple SLURM/PBS batch jobs for give batch
+ Job ID or Status. For killing SLURM/PBS batch jobs, you must login to cheyenne/caser
+ login nodes.
+ 
+ Usage: rdakill [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
+                [-s BatchStatus] [-u ProcessOwner] [-a ApplicationName]
+
+      - Option -a, application name of the process;
+
+      - Option -h, hostname the process is on. Omit it for local process,
+        but it is mandatory if the process id is a SLURM/PBS bactch id.
+ 
+      - Option -p, the process id or batch job id to be stopped.
+ 
+      - Option -P, the parent process id;
+ 
+      - Option -q, the SLURM Partition or PBS queue name. It defaults to 'rda';
+
+      - Option -s, the Batch Job Status; this is mantatory if batch id is not provided;
+
+      - Option -u, use login name for the process owner. It defaults to 'all' for
+        all user login names.
+
+  This help document is displayed if rdakill is executed without option.
+  
+  For examples, to kill a process of a dsrqst process with pid 13199 locally,
+     
+     rdakill -p 13199 -a dsrqst
+ 
+  The child processes under the dsrqst process, if any, are also terminated. To kill
+  a PBS bactch process with a bid = 334323,
+     
+     rdakill -h PBS -p 334323
+ 

@@ -1,0 +1,64 @@
+
+ To submit a job execution as a batch job in bash script on a PBS node via 'qsub'.
+ 
+ Usage: rdaqsub [qsub-options] [-cwd WorkDir] [-env EnvironmentPairs]   \
+                [-mod Modules] [-res Reservation] -cmd Command [cmd-options]
+
+      - qsub-options, accepts options that can be passed to 'qsub' in a bash script.
+          Check qsub man page for help on the PBS batch options. Here is the list of
+          qsub options that are included at default:
+            -o LOGPATH/rdaqsub/
+            -e LOGPATH/rdaqsub/
+            -A P43713000
+            -m a
+            -q regular
+            -l walltime=6:00:00,select=1:node=1:mem=1gb
+
+      - Option -cwd, set the working directory for the Command to be executed. If
+          it is not specified, it defaults to the current directory where qsub
+          command is executed.  
+ 
+      - Option -env, set environment name/value pairs separated by ',' dynamically
+          for the Command to be executed. This is equivilent to qsub-option -v.
+
+      - Option -mod, set module list separated  by ',' for loading modules to execute
+          the command.
+
+      - Option -res, set Reservation name to load modules and start VM libs;
+
+      - Option -cmd, mandatory option to lead a Command to be executed;
+
+      - cmd-options, specifies options that can be passed to the Command.
+
+A bash script example:
+#!/usr/bin/bash
+
+#PBS -o /gpfs/u/home/rdadata/dssdb/log/rdaqsub/
+#PBS -e /gpfs/u/home/rdadata/dssdb/log/rdaqsub/
+#PBS -A P43713000
+#PBS -q rda@casper-pbs
+#PBS -m n
+#PBS -N dsrqst
+#PBS -l walltime=1:00:00
+#PBS -l select=1:ncpus=1:mem=1gb
+export HOME=/gpfs/u/home/zji
+source /etc/profile.d/z00_modules.sh
+source /glade/u/apps/opt/conda/etc/profile.d/conda.sh
+source /gpfs/u/home/zji/.bashrc
+pwd; hostname; date
+
+module load ncarenv
+module load netcdf
+module load ncl
+module load nco
+module load cdo
+module load conda
+module load grib-util
+module load wgrib2
+
+conda activate /glade/work/rdadata/conda-envs/pg-casper
+
+echo /gpfs/u/home/rdadata/bin/dsrqst d277000 PR -RI 750748 -b -d
+/gpfs/u/home/rdadata/bin/dsrqst d277000 PR -RI 750748 -b -d
+
+date

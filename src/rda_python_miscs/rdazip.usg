@@ -1,0 +1,20 @@
+
+ Compress/Uncompress given files.
+  
+ Usage: rdazip [-f CompressFormat] FileList
+
+      - Option -f, compression format, Z, gz, zip or bz2. Specify this format 
+                   to compress, otherwise to umcompress
+
+  For examples, to compress a file using gzip, testfile.txt => testfile.txt.gz
+ 
+     rdazip -f gz testfile.txt
+  
+  and to uncompress a gzipped file, testfile.txt.gz => get testfile.txt
+ 
+     rdazip testfile.txt.gz
+ 
+  and to change compression from Z to gz, testfile.txt.Z => testfile.txt.gz
+  
+     rdazip -f gz testfile.txt.Z
+ 

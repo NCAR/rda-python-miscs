@@ -1,0 +1,62 @@
+
+ Copy directories and files in the current or specified directories to a target
+ directory. The owner of the target directories and files is 'rdadata' with default
+ or specified modes.
+  
+ Usage: rdacp [-D DiretoryMode] [-f] FromDirecctories/Files [-F FileMode]  \
+              [-hf HtarFileName] [-fh FromHostName] [-h] [-r] [-R RecursiveLevel] \
+              [-t ToDirectory/FileName] [-th ToHostName] [-fl FileCountLimit]
+
+      - Option -D, changes mode of target directories. It defaults to "775";
+
+      - Option -f, mandatory option for directories and files to be copied from. 
+        Unix command line wildcards are supported. Use './' or '*' for all
+        directories and files in the current directory to be copied.
+        The directories and files must be readable by user 'rdadata';
+        otherwise 'rdacp' will try to change file mode to make them readable.
+        The file names are htar member files if a htar file name is provided
+        by Option -hf;
+ 
+      - Option -fh, host name for directories and files to be copied from. 
+        It defaults to local host unless htar file name is provded via Option
+        -hf, then it defaults to hpss;
+ 
+      - Option -F, changes mode of target files. It defaults to "664";
+
+      - Option -h, display this help document;
+
+      - Option -hf, provides a HTAR file name to retrieve its one or multiple
+        member files to local for option -fh HPSS, or to htar givens local files
+        onto HPSS for option -th HPSS;
+ 
+      - Option -r, copies directories and files recursively;
+
+      - Option -R, copies directories and files recursively up to the level provided
+        with this Option;
+
+      - Option -t, provides a target Directory/File name. Its value defaults to '.'.
+        Mutilple source files can not be copied if a single target file name is
+        specified.
+ 
+      - Option -th, host name for target directories and files. 
+        It defaults to local host;
+
+      - Option -fl, file count limit in each htar file, default 0 means all files in
+        a single htar file; if > 0, it means to archive multiple htar files, with
+        each holding up to the given file count. The max value is 5000000;
+ 
+  This utility program can be executed anywhere. This help document is displayed if
+  either the source Directory/File Names are missed. 
+ 
+  For examples, to copy every directory/file under the current directory to under
+  ds277.6 on host castle, you can
+     
+     rdacp  -r -t /PathTo/ds277.6/ -th castle -f *
+
+  To copy every directory/file under a given local directory to under ds277.6
+  on host castle, you can
+     
+     rdacp  -r -t /PathTo/ds277.6/ -th castle -f /PathTo/DirectoryName/
+  
+  where if the ending '/' is missed, the DirectoryName itself is copied too.
+ 
