@@ -1,0 +1,12 @@
+
+ To submit a nohup background execution job on a Linux machine.
+ 
+ Usage: rdasub [-env EnvironmentPairs] [-cwd WorkDir] -cmd Command [cmd-options]
+
+      - Option -cwd, set the working directory a Command to be executed;
+ 
+      - Option -cmd, mandatory option to lead a Command to be executed;
+
+      - Option -env, set environment name/value pairs separated by ',';
+
+      - cmd-options, specifies options that can be passed to the Command.

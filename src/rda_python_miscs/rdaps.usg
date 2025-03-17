@@ -1,0 +1,29 @@
+
+ List matching process information for local or batch processes if they are running.
+  
+ Usage: rdaps [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
+              [-u ProcessOnwer] [-a ApplicationName]
+
+      - Option -a, application name of the process;
+
+      - Option -h, hostname the process is on; omit it for local process,
+        but it is mandatory if the process id is a SLURM/PBS bactch id.
+
+      - Option -p, the local process or batch job id to be checked;
+
+      - Option -P, the parent process id on the local machine;
+ 
+       - Option -u, use login name for the process owner. It defaults to 'all' for
+        all user login names.
+ 
+  This utility program can be executed on selected machines. This help document
+  is displayed if no option is provided.
+  
+  For examples, to list process information of a dsrqst process with pid 13199 locally,
+
+     rdaps -p 13199 -a dsrqst
+
+  To list a PBS bactch process with a bid = 334323,
+ 
+     rdaps -h PBS -p 334323
+ 

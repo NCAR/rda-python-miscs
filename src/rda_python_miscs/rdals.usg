@@ -1,0 +1,61 @@
+
+ List directory and file information of the current or specified directories
+ with metadata information recorded in RDADB if matched. Four columns are
+ listed, they are Directory Name, Data Volume, File Count, and Brief
+ Description if the listed item is a directory, and they are File Name,
+ Data Size, Data Format, and Brief Description if the listed item is a
+ file.
+ 
+ A leading letter is displayed on each line to indicate what type item is listed;
+ including 'D' for a whole dataset, 'G' for a group or subgroup in a dataset,
+ and 'F' for a data file.
+ 
+ The output of directory/file list is formatted as default with double spaces
+ as delimiter and each column lined up vertically at least for the files under each
+ directory. Provide Option -N to display list without format. A delimiter symbol '|'
+ is defaulted if Option -N is present.
+ 
+ Usage: rdals [-d] [-f] [-N] [-h] [-r] [-D DelimitSymbols] [-R RecursiveLevel] [Directory/File List]
+
+      - Option -d, list directory information only. Directory information
+        is included as default. Add this option to exclude file information;
+ 
+      - Option -f, list file information only. File information
+        is included as default. Add this option to exclude directory information;
+ 
+      - Option -N, list files unformatted;
+
+      - Option -h, display this help document;
+
+      - Option -r, list directories and files recursively;
+
+      - Option -R, list directories and files recursively up to the level 
+        provided with this Option;
+
+      - Option -D, specify delimiting symbols for dividing the columns.
+        It defaults to "  " for formatted output and '|' for unformatted output.
+        Make sure quote the symbols if any character in the symbols has Unix
+        meaning, for example -D '<:>';
+
+      - Directory/file List is optional; without specification, all directories
+        and files in the current directory are listed. Unix command line
+        wildcards are supported.
+
+  This utility program can be executed anywhere. Nothing is displayed if neither
+  directory nor file information matches RDADB information.
+  
+  For examples, to check directories and files of ds277.6, you can
+     
+     1. Change into the dataset home data directory as 'cd /PathTo/ds277.6' and
+        execute 'rdals'; add recursive option '-r' to check directories and files
+        further into the sub-directories, or change directory into a sub-directory
+        to check files inside of it.
+     
+     2. Pass an absolute path to rdals as 'rdals /PathTo/ds277.6/' or as
+        'rdals /PathTo/ds277.6/*'; without the ending by '/' or an appended
+        wildcard symbol '*' information of the dataset itself is check unless
+        the recursive option '-r' or '-R RecursiveLevel' is present
+     
+     3. If the current directory is in another dataset home data directory,
+        such as /PathTo/ds277.7, you can pass a relative path to rdals
+        as  'rdals ../ds277.6/' or as 'rdals ../ds277.6/*'
