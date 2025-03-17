@@ -46,7 +46,7 @@ def main():
       if ms:
          option = ms.group(1)
          continue
-      if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, rdasub), PgLOG.LGEREX)
+      if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, aname), PgLOG.LGEREX)
       if arg.find(' ') > -1 and not re.match(r'^[\'\"].*[\'\"]$', arg):   # quote string with space but not quoted yet
          if arg.find("'") > -1:
             arg = '"{}"'.format(arg)

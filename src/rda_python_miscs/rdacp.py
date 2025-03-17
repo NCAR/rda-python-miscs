@@ -24,13 +24,11 @@ from rda_python_common import PgFile
 
 RDACP = {
    'fh' : None,   # from host name, default to localhost
-   'hf' : None,   # htar file name
    'th' : None,   # to host name, defaul to localhost
    'fb' : None,   # from bucket name for a from file in Object Store
    'tb' : None,   # to bucket name for a to file in Object Store
    'fp' : None,   # from Globus endpoint
    'tp' : None,   # to Globus endpoint
-   'fl' : 0,      # file limit for htar
    'f' : [],      # from file names
    't' : None,    # to file name
    'r' : 0,       # 1 if recursive all
@@ -48,8 +46,7 @@ CINFO = {
    'tpath' : None,
    'fhost' : '',
    'thost' : '',
-   'curdir' : os.getcwd(),
-   'ishpss' : 0
+   'curdir' : os.getcwd()
 }
 
 #
@@ -82,7 +79,7 @@ def main():
          RDACP['f'].append(arg)
          defopt = None
       else:
-         if option == 'R' or option == 'fl':
+         if option == 'R':
             RDACP[option] = int(arg)
          elif 'FD'.find(option) > -1:
             RDACP[option] = PgLOG.base2int(arg, 8)
@@ -90,10 +87,8 @@ def main():
             RDACP[option] = arg
             if option == 'th':
                CINFO['thost'] = arg + '-'
-               if re.match(r'^HPSS', arg, re.I): CINFO['ishpss'] |= 1
             elif option == 'fh':
                CINFO['fhost'] = arg + '-'
-               if re.match(r'^HPSS', arg, re.I): CINFO['ishpss'] |= 2
          option = defopt
             
    if dohelp or not RDACP['f']: PgLOG.show_usage("rdacp")
@@ -125,37 +120,16 @@ def main():
    elif RDACP['tp']:
       PgLOG.PGLOG['BACKUPEP'] = RDACP['tp']
 
-   if RDACP['hf']:
-      if CINFO['ishpss'] == 2:
-         copy_htar_member_files(RDACP['f'])
-      elif CINFO['ishpss'] == 1:
-         if RDACP['fl'] > 0:
-            multiple_htar_hpss()
-         elif PgFile.local_htar_hpss(RDACP['hf'], RDACP['f'], PgLOG.LGWNEX):
-            CINFO['tcnt'] = len(RDACP['f'])
-            CINFO['hcnt'] = 1
-      elif CINFO['ishpss'] == 0:
-         PgLOG.pglog(RDACP['hf'] + ": Cannot htar for missing option -fh/-th HPSS", PgLOG.LGEREX)
-      else:
-         PgLOG.pglog(RDACP['hf'] + ": Cannot htar for seting options -fh HPSS & -th HPSS", PgLOG.LGEREX)
-   else:
-      copy_top_list(RDACP['f'])
+   copy_top_list(RDACP['f'])
 
    hinfo = ''
    if RDACP['fh']: hinfo += " From " + RDACP['fh']
    if RDACP['th']: hinfo += " To " + RDACP['th']
-   if RDACP['hf']:
-      s = 'Htarred' if CINFO['ishpss'] == 1 else 'Un-Htarred'
-      if CINFO['tcnt'] > 1:
-         PgLOG.pglog("Total {} files {}{}".format(CINFO['tcnt'], s, hinfo), PgLOG.LOGWRN)
-         if CINFO['hcnt'] > 1: PgLOG.pglog("{} HTAR files are generated".format(CINFO['hcnt']), PgLOG.LOGWRN)
-      elif CINFO['tcnt'] == 0:
-         PgLOG.pglog("{}: No File {}{}".format((CINFO['fpath'] if CINFO['fpath'] else CINFO['curdir']), s, hinfo), PgLOG.LOGWRN)
-   else:
-      if CINFO['tcnt'] > 1:
-         PgLOG.pglog("Total {} {} copiled{}".format(CINFO['tcnt'], CINFO['cpstr'][CINFO['cpflag']], hinfo), PgLOG.LOGWRN)
-      elif CINFO['tcnt'] == 0 and not RDACP['fh']:
-         PgLOG.pglog("{}: No File copied{}".format((CINFO['fpath'] if CINFO['fpath'] else CINFO['curdir']), hinfo), PgLOG.LOGWRN)
+
+   if CINFO['tcnt'] > 1:
+      PgLOG.pglog("Total {} {} copiled{}".format(CINFO['tcnt'], CINFO['cpstr'][CINFO['cpflag']], hinfo), PgLOG.LOGWRN)
+   elif CINFO['tcnt'] == 0 and not RDACP['fh']:
+      PgLOG.pglog("{}: No File copied{}".format((CINFO['fpath'] if CINFO['fpath'] else CINFO['curdir']), hinfo), PgLOG.LOGWRN)
    
    PgLOG.cmdlog()
    PgLOG.pgexit(0)
@@ -230,70 +204,6 @@ def copy_file(fromfile, isfile):
       tofile = RDACP['t']
  
    return (1 if PgFile.copy_rda_file(tofile, fromfile, RDACP['th'], RDACP['fh'], PgLOG.LGWNEX) else 0)
-
-#
-# copy htar member files from HPSS to local
-#
-def copy_htar_member_files(files):
-
-   htarfile = RDACP['hf']
-   for f in files:
-      info = check_htar_file(f, htarfile, 0, PgLOG.LGWNEX)
-      if not info:
-         PgLOG.pglog("{}{}: {} in tar file {}".format(CINFO['fhost'], f, PgLOG.PGLOG['MISSFILE'], htarfile), PgLOG.LOGERR)
-         continue
-      elif info['isfile'] == 0:
-         PgLOG.pglog("{}{}: Cannot copy directory from htar file {}".format(CINFO['fhost'], f, htarfile), PgLOG.LGEREX)
-
-      if PgFile.hpss_htar_local(f, htarfile, PgLOG.LGWNEX):
-         tcnt += 1
-         if not CINFO['tpath']:
-            t = RDACP['tf']   # copy a single htar member file
-         elif CINFO['tpath'] != '.':
-            t = PgUtil.join_paths(CINFO['tpath'], f)
-         else:
-            t = None
-         if t:
-            ms = re.match(r'^\./{0,1}(.+)$', t)
-            if ms: t = ms.group(1)
-            if f != t and PgFile.move_local_file(t, f, PgLOG.LGWNEX): CINFO['tcnt'] += 1
-   if cinfo['tcnt'] > 0: CINFO['hcnt'] = 1
-
-#
-# thar local files to multiple htar files
-#
-def multiple_htar_hpss():
-
-   locfiles = PgUtil.recursive_files(fromfiles)
-   lcnt = len(locfiles)
-
-   if RDACP['fl'] > 5000000:
-      PgLOG.pglog("{}: too large, reduces to 5000000".format(RDACP['fl']), PgLOG.LOGWRN)
-      RDACP['fl'] = 5000000
-
-   fcnt = int(lcnt/flimit)
-   if fcnt*flimit == lcnt:
-      mcnt = flimit
-   else:
-      fcnt += 1
-      mcnt = int(lcnt/fcnt)
-      if mcnt*fcnt < lcnt: mcnt += 1 
-
-   if fcnt > 1: PgLOG.pglog("{}: archive {} local files to {} htar files".format(htarfile, lcnt, fcnt), PgLOG.LOGWRN)
-
-   for i in range(fcnt):
-      idx1 = i*mcnt
-      if i == (fcnt-1):
-         idx2 = lcnt
-         mcnt = lcnt - idx1
-      else:
-         idx2 = idx1 + mcnt
-      mfiles = locfiles[idx1:idx2]
-      hfile = re.sub(r'\.htar$', '_{}.htar'.format(i), htarfile) if i > 0 else htarfile
-      if PgFile.local_htar_hpss(hfile, mfiles, PgLOG.LGWNEX):
-         if fcnt > 1: PgLOG.pglog("HPSS-{}: {} file{} Htarred".format(hfile, mcnt), PgLOG.LOGWRN)
-         CINFO['tcnt'] += mcnt
-         CINFO['hcnt'] += 1
 
 #
 # call main() to start program

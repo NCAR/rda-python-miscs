@@ -60,7 +60,7 @@ def main():
          option = ms.group(1)
          if option not in RDAOWN: PgLOG.pglog(arg + ": Unknown Option", PgLOG.LGEREX)
          if 'dfhr'.find(option) > -1:
-            RDALS[option] = 1
+            RDAOWN[option] = 1
             option = defopt
          continue
       if not option: PgLOG.pglog(arg + ": Value provided without option", PgLOG.LGEREX)
