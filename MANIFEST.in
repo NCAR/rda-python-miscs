@@ -1,1 +1,10 @@
-include src/rda_python_miscs/
+include src/rda_python_miscs/bashqsub.usg
+include src/rda_python_miscs/tcshqsub.usg
+include src/rda_python_miscs/rdasub.usg
+include src/rda_python_miscs/rdacp.usg
+include src/rda_python_miscs/rdakill.usg
+include src/rda_python_miscs/rdals.usg
+include src/rda_python_miscs/rdamod.usg
+include src/rda_python_miscs/rdaown.usg
+include src/rda_python_miscs/rdaps.usg
+include src/rda_python_miscs/rdazip.usg
