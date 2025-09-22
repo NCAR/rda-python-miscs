@@ -170,7 +170,7 @@ def display_line(file, isdir):
          wfile = ms.group(1)
          getwfile = 0
    if getwfile:
-      LINFO['dsid'] = PgUtil.find_dataset_id(file, logact = PgLOG.LOGWRN)
+      LINFO['dsid'] = PgUtil.find_dataset_id(file)
       if LINFO['dsid'] == None: return     # skip for missing dsid
 
       pgrec = PgDBI.pgget("dataset", "title, (dwebcnt + nwebcnt) nc, (dweb_size + nweb_size) ns", "dsid = '{}'".format(LINFO['dsid']), PgLOG.LGEREX)
