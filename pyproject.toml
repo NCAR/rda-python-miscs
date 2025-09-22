@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rda_python_miscs"
-version = "1.0.1"
+version = "1.0.2"
 authors = [
   { name="Zaihua Ji", email="zji@ucar.edu" },
 ]
@@ -44,6 +44,7 @@ where = ["src"]
 "rdasub" = "rda_python_miscs.rdasub:main"
 "pgwget" = "rda_python_miscs.pgwget:main"
 "rdals" = "rda_python_miscs.rdals:main"
+"gdexls" = "rda_python_miscs.gdexls:main"
 "rdaps" = "rda_python_miscs.rdaps:main"
 "rdaown" = "rda_python_miscs.rdaown:main"
 "rdacp.py" = "rda_python_miscs.rdacp:main"
