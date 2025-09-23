@@ -9,7 +9,7 @@
 #            https://github.com/NCAR/rda-utility-programs.git
 #            2025-09-21 copied from rdals to gdexls
 #   Purpose: list files/directories in a local directory and show additional
-#            information recorded in RDADB if any
+#            information recorded in GDEXDB if any
 #
 #    Github: https://github.com/NCAR/rda-python-miscs.git
 #
@@ -31,7 +31,7 @@ CLMT = 500   # reformat list if count reach this limit
 WIDTHS = [0, 0, 0]   # WIDTHS for formated display
 ALIGNS = [0, 1, 1]   # alignment, 0 - left; 1 - right
 
-RDALS = {
+GDEXLS = {
    'd' : 0,     # 1 to list directory information only
    'f' : 0,     # 1 to list file information only
    'N' : 0,     # 1 to list files unformatted
@@ -70,9 +70,9 @@ def main():
       ms = re.match(r'-(\w)$', arg)
       if ms:
          option = ms.group(1)
-         if option not in RDALS: PgLOG.pglog(arg + ": Unknown Option", PgLOG.LGEREX)
+         if option not in GDEXLS: PgLOG.pglog(arg + ": Unknown Option", PgLOG.LGEREX)
          if 'dfNr'.find(option) > -1:
-            RDALS[option] = 1
+            GDEXLS[option] = 1
             option = defopt
          continue
       if not option: PgLOG.pglog(arg + ": Value provided without option", PgLOG.LGEREX)
@@ -81,9 +81,9 @@ def main():
          defopt = None
       else:
          if option == 'R':
-            RDALS[option] = int(arg)
+            GDEXLS[option] = int(arg)
          else:
-            RDALS[option] = arg
+            GDEXLS[option] = arg
          option = defopt
    
    if not LINFO['files']:
@@ -92,10 +92,10 @@ def main():
          sys.stderr.write(LINFO['curdir'] + ": Empty directory\n")
          PgLOG.pgexit(1)
 
-   if not (RDALS['d'] or RDALS['f']):
-      RDALS['d'] = RDALS['f'] = 1   # list both directories and files as default
-   if not RDALS['D']: RDALS['D'] = '|' if RDALS['N'] else "  "    # default delimiter for no format display
-   if not RDALS['R'] and RDALS['r']: RDALS['R'] = 1000
+   if not (GDEXLS['d'] or GDEXLS['f']):
+      GDEXLS['d'] = GDEXLS['f'] = 1   # list both directories and files as default
+   if not GDEXLS['D']: GDEXLS['D'] = '|' if GDEXLS['N'] else "  "    # default delimiter for no format display
+   if not GDEXLS['R'] and GDEXLS['r']: GDEXLS['R'] = 1000
 
    display_top_list(LINFO['files'])   # display or cache file/directory list
    if LINFO['pcnt'] > 0: display_format_list()   # if some left over
@@ -115,7 +115,7 @@ def main():
          msg += "{} File{}".format(LINFO['fcnt'], s)
       print("Total {} displayed".format(msg))
    elif (LINFO['dcnt'] + LINFO['gcnt'] + LINFO['fcnt']) == 0:
-      sys.stderr.write((LINFO['tpath'] if LINFO['tpath'] else LINFO['curdir']) + ": No RDA data information found\n")
+      sys.stderr.write((LINFO['tpath'] if LINFO['tpath'] else LINFO['curdir']) + ": No GDEX data information found\n")
       PgLOG.pgexit(1)
    
    PgLOG.pgexit(0)
@@ -140,7 +140,7 @@ def display_top_list(files):
       if not re.match(r'^/', file): file = PgLOG.join_paths(LINFO['curdir'], file)
       LINFO['tpath'] = (op.dirname(file) if display else file) + "/"
       if display: display_line(file, isdir)
-      if isdir and (RDALS['R'] or not display or not LINFO['dsid']):
+      if isdir and (GDEXLS['R'] or not display or not LINFO['dsid']):
          fs = sorted(glob.glob(file + "/*"))
          display_list(fs, 1)
          if LINFO['pcnt'] > CLMT: display_format_list()
@@ -153,7 +153,7 @@ def display_list(files, level):
    for file in files:
       isdir = 1 if op.isdir(file) else 0
       display_line(file, isdir)
-      if isdir and level < RDALS['R']:
+      if isdir and level < GDEXLS['R']:
          fs = sorted(glob.glob(file + "/*"))
          display_list(fs, level+1)
          if LINFO['pcnt'] > CLMT: display_format_list()
@@ -179,7 +179,7 @@ def display_line(file, isdir):
       LINFO['dhome'] = "{}/{}".format(PgLOG.PGLOG['DSDHOME'], LINFO['dsid'])
       if LINFO['dhome'] == file:
          file = re.sub(r'^{}'.format(LINFO['tpath']), '', file, 1)
-         if RDALS['d']:
+         if GDEXLS['d']:
             title = pgrec['title'] if pgrec['title'] else ''
             display_record(["D" + file, pgrec['ns'], str(pgrec['nc']), title])
          LINFO['dcnt'] += 1
@@ -192,7 +192,7 @@ def display_line(file, isdir):
          return
 
    if isdir:
-      if RDALS['d']:   # check and display group info for directory
+      if GDEXLS['d']:   # check and display group info for directory
          pgrec = PgDBI.pgget("dsgroup", "title, (dwebcnt + nwebcnt) nc, (dweb_size + nweb_size) ns",
                              "dsid = '{}' AND webpath = '{}'".format(LINFO['dsid'], wfile), PgLOG.LGEREX)
          if pgrec:
@@ -201,7 +201,7 @@ def display_line(file, isdir):
             display_record(["G" + file, pgrec['ns'], str(pgrec['nc']), title])
             LINFO['gcnt'] += 1
 
-   elif RDALS['f']:   # check and display file info
+   elif GDEXLS['f']:   # check and display file info
       pgrec = PgSplit.pgget_wfile(LINFO['dsid'], "data_size, data_format, note",
                           "wfile = '{}'".format(wfile), PgLOG.LGEREX)
       if pgrec:
@@ -219,8 +219,8 @@ def display_line(file, isdir):
 def display_record(disp):
 
    disp[1] = get_float_string(disp[1])
-   if RDALS['N']:
-      print(RDALS['D'].join(disp))
+   if GDEXLS['N']:
+      print(GDEXLS['D'].join(disp))
    else:
       LINFO['pgrecs'].append(disp)
       LINFO['pcnt'] += 1
@@ -240,7 +240,7 @@ def display_format_list():
             disp[i] = "{:>{}}".format(disp[i], WIDTHS[i])
          else:
             disp[i] = "{:{}}".format(disp[i], WIDTHS[i])
-      print(RDALS['D'].join(disp))
+      print(GDEXLS['D'].join(disp))
 
    LINFO['pcnt'] = 0
 
@@ -271,7 +271,7 @@ def get_real_path(path):
    elif re.match(r'^/gpfs/csfs1/', path):
       path = re.sub(r'^/gpfs/csfs1', '/glade/campaign', path, 1)
 
-   return path
+   return op.realpath(path)
 
 #
 # call main() to start program
