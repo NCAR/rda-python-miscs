@@ -101,7 +101,7 @@ def main():
       if ms:
          CINFO['tpath'] = ms.group(1)
       else:
-         tinfo = PgFile.check_rda_file(RDACP['t'], RDACP['th'], 0, PgLOG.LGWNEX)
+         tinfo = PgFile.check_gdex_file(RDACP['t'], RDACP['th'], 0, PgLOG.LGWNEX)
          if tinfo and tinfo['isfile'] == 0: CINFO['tpath'] = RDACP['t']
    PgLOG.PGLOG['FILEMODE'] = RDACP['F']
    PgLOG.PGLOG['EXECMODE'] = RDACP['D']
@@ -141,9 +141,9 @@ def copy_top_list(files):
    
    for file in files:
       if RDACP['th'] and not PgUtil.pgcmp(RDACP['th'], PgLOG.PGLOG['BACKUPNM'], 1):
-         info = PgFile.check_globus_file(file, 'rda-glade', 0, PgLOG.LGWNEX)
+         info = PgFile.check_globus_file(file, 'gdex-glade', 0, PgLOG.LGWNEX)
       else:
-         info = PgFile.check_rda_file(file, RDACP['fh'], 0, PgLOG.LGWNEX)
+         info = PgFile.check_gdex_file(file, RDACP['fh'], 0, PgLOG.LGWNEX)
       if not info:
          PgLOG.pglog("{}{}: {}".format(CINFO['fhost'], file, PgLOG.PGLOG['MISSFILE']), PgLOG.LOGERR)
          continue
@@ -165,7 +165,7 @@ def copy_top_list(files):
       if info['isfile']:
          CINFO['tcnt'] += copy_file(file, info['isfile'])
       elif dosub or RDACP['R']:
-         flist = PgFile.rda_glob(file, RDACP['fh'], 0, PgLOG.LGWNEX)
+         flist = PgFile.gdex_glob(file, RDACP['fh'], 0, PgLOG.LGWNEX)
          if flist: copy_list(flist, 1, file)
       else:
          PgLOG.pglog("{}{}: Add option -r to copy directory".format(CINFO['fhost'], file), PgLOG.LGEREX)
@@ -182,7 +182,7 @@ def copy_list(tlist, level, cdir):
          fcnt += copy_file(file, tlist[file]['isfile'])
          CINFO['cpflag'] |= (1 if tlist[file]['isfile'] else 2)
       elif level < RDACP['R']:
-         flist = PgFile.rda_glob(file, RDACP['fh'], 0, PgLOG.LGWNEX)
+         flist = PgFile.gdex_glob(file, RDACP['fh'], 0, PgLOG.LGWNEX)
          if flist: copy_list(flist, level+1, file)
 
    if fcnt > 1:   # display sub count if two or more files are copied
@@ -203,7 +203,7 @@ def copy_file(fromfile, isfile):
    else:
       tofile = RDACP['t']
  
-   return (1 if PgFile.copy_rda_file(tofile, fromfile, RDACP['th'], RDACP['fh'], PgLOG.LGWNEX) else 0)
+   return (1 if PgFile.copy_gdex_file(tofile, fromfile, RDACP['th'], RDACP['fh'], PgLOG.LGWNEX) else 0)
 
 #
 # call main() to start program
