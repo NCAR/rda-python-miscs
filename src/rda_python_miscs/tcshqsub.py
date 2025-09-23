@@ -24,7 +24,7 @@ DEFMODS = {
 }
 
 DEFLIBS = {
-   'default' : "conda activate /glade/work/rdadata/conda-envs/pg-casper",
+   'default' : "conda activate /glade/work/gdexdata/conda-envs/pg-casper",
 }
 
 SWAPMODS = {
