@@ -1,17 +1,17 @@
 
  To submit a job execution as a batch job in tcsh script on a PBS node via 'qsub'.
  
- Usage: rdaqsub [qsub-options] [-cwd WorkDir] [-env EnvironmentPairs]   \
-                [-mod Modules] [-res Reservation] -cmd Command [cmd-options]
+ Usage: tcshqsub [qsub-options] [-cwd WorkDir] [-env EnvironmentPairs]   \
+                 [-mod Modules] [-res Reservation] -cmd Command [cmd-options]
 
       - qsub-options, accepts options that can be passed to 'qsub' in a tcsh script.
           Check qsub man page for help on the PBS batch options. Here is the list of
           qsub options that are included at default:
-            -o LOGPATH/rdaqsub/
-            -e LOGPATH/rdaqsub/
+            -o LOGPATH/gdexqsub/
+            -e LOGPATH/gdexqsub/
             -A P43713000
             -m a
-            -q regular
+            -q gdex
             -l walltime=6:00:00,select=1:node=1:mem=1gb
 
       - Option -cwd, set the working directory for the Command to be executed. If
@@ -33,17 +33,17 @@
 A tash script example:
 #!/bin/tcsh
 
-#PBS -o /gpfs/u/home/rdadata/dssdb/log/rdaqsub/
-#PBS -e /gpfs/u/home/rdadata/dssdb/log/rdaqsub/
+#PBS -o /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
+#PBS -e /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
 #PBS -A P43713000
-#PBS -q rda@casper-pbs
+#PBS -q gdex@casper-pbs
 #PBS -m a
 #PBS -N dsrqst
 #PBS -l walltime=12:00:00
 #PBS -l select=1:mem=20gb
 setenv HOME /gpfs/u/home/davestep
-source /etc/profile.d/z00_modules.tsh
-source /glade/u/apps/opt/conda/etc/profile.d/conda.tsh
+source /etc/profile.d/z00_modules.csh
+source /glade/u/apps/opt/conda/etc/profile.d/conda.csh
 source /gpfs/u/home/davestep/.tcshrc
 pwd; hostname; date
 
@@ -56,7 +56,7 @@ module load conda
 module load grib-util
 module load wgrib2
 
-conda activate /glade/work/rdadata/conda-envs/pg-casper
+conda activate /glade/work/gdexdata/conda-envs/pg-casper
 
-echo /gpfs/u/home/rdadata/bin/dsrqst d628000 SP -RI 729708 -NP -b -d
-/gpfs/u/home/rdadata/bin/dsrqst d628000 SP -RI 729708 -NP -b -d
+echo /glade/work/gdexdata/conda-envs/pg-casper/bin/dsrqst d628000 SP -RI 729708 -NP -b -d
+/glade/work/gdexdata/conda-envs/pg-casper/bin/dsrqst d628000 SP -RI 729708 -NP -b -d
