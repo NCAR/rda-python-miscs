@@ -39,7 +39,7 @@ SOPTIONS = {   # single-dash option values
    'o' : None,    # will set to default if not provided
    'e' : None,
    'A' : "P43713000",
-   'q' : "rda@casper-pbs",
+   'q' : "gdex@casper-pbs",
 #   'm' : 'a',
    'm' : 'n',
 }
@@ -50,9 +50,9 @@ SOPTIONS = {   # single-dash option values
 def main():
 
    aname = 'tcshqsub'
-   pname = 'rdaqsub'
+   pname = 'gdexqsub'
    PgLOG.set_help_path(__file__)
-   rdasub = PgLOG.BCHCMDS['PBS']
+   gdexsub = PgLOG.BCHCMDS['PBS']
    coptions = {'cmd' : None, 'cwd' : None, 'env' : None, 'mod' : None, 'res' : 'default'}       # customized options
    copts = '|'.join(coptions)
    option = None
@@ -61,7 +61,7 @@ def main():
    if not argv: PgLOG.show_usage(aname)
    PgLOG.PGLOG['LOGFILE'] = pname + ".log"
    PgLOG.cmdlog("{} {}".format(aname, ' '.join(argv)))
-   if not PgLOG.valid_command(rdasub): PgLOG.pglog("{}: miss {} command to submit batch job".format(rdasub, PgLOG.PGLOG['PBSNAME']), PgLOG.LGWNEX)
+   if not PgLOG.valid_command(gdexsub): PgLOG.pglog("{}: miss {} command to submit batch job".format(gdexsub, PgLOG.PGLOG['PBSNAME']), PgLOG.LGWNEX)
 
    while argv:
       arg = argv.pop(0)
@@ -80,7 +80,7 @@ def main():
          if option == "env": option = 'v'
          continue
 
-      if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, rdasub), PgLOG.LGEREX)
+      if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, gdexsub), PgLOG.LGEREX)
       if arg.find(' ') > -1 and not re.match(r'^[\'\"].*[\'\"]$', arg):   # quote string with space but not quoted yet
          if arg.find("'") > -1:
             arg = '"{}"'.format(arg)
@@ -111,10 +111,10 @@ def main():
    if not cmd: PgLOG.pglog(coptions['cmd'] + ": Cannot find given command to run", PgLOG.LGWNEX)
    if args: cmd += " " + args
 
-   sbuf = build_tcsh_script(cmd, coptions, rdasub)
+   sbuf = build_tcsh_script(cmd, coptions, gdexsub)
    PgLOG.pglog(sbuf, PgLOG.MSGLOG)
    PgLOG.PGLOG['ERR2STD'] = ['bind mouting']
-   PgLOG.pgsystem(rdasub, PgLOG.LOGWRN, 6, sbuf)
+   PgLOG.pgsystem(gdexsub, PgLOG.LOGWRN, 6, sbuf)
    PgLOG.PGLOG['ERR2STD'] = []
 
    sys.exit(0)
@@ -122,7 +122,7 @@ def main():
 #
 # build tcsh script to submit a PBS batch job
 #
-def build_tcsh_script(cmd, coptions, rdasub):
+def build_tcsh_script(cmd, coptions, gdexsub):
 
    buf = "#!/bin/tcsh\n\n"   # sbatch starting tcsh script
 
