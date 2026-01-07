@@ -99,7 +99,7 @@ class TcshQsub(PgLOG):
       if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
       if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
       if self.args: cmd += " " + self.args
-      sbuf = build_tcsh_script(cmd)
+      sbuf = self.build_tcsh_script(cmd)
       self.pglog(sbuf, self.MSGLOG)
       self.PGLOG['ERR2STD'] = ['bind mouting']
       self.pgsystem(self.gdexsub, self.LOGWRN, 6, sbuf)
@@ -125,8 +125,8 @@ class TcshQsub(PgLOG):
       buf += "source /glade/u/apps/opt/conda/etc/profile.d/conda.csh\n"
       buf += "source {}/.tcshrc\n".format(homedir)
       buf += "pwd; hostname; date\n"
-      buf += add_modules(self.coptions['res'], self.coptions['mod'])
-      buf += set_vm_libs(self.coptions['res'])
+      buf += self.add_modules(self.coptions['res'], self.coptions['mod'])
+      buf += self.set_vm_libs(self.coptions['res'])
       buf += "\necho {}\n{}\n\ndate\n".format(cmd, cmd)
       return buf
    
