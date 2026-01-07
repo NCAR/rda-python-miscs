@@ -108,7 +108,7 @@ class TcshQsub(PgLOG):
    # build tcsh script to submit a PBS batch job
    def build_tcsh_script(self, cmd):
       buf = "#!/bin/tcsh\n\n"   # sbatch starting tcsh script
-      if 'l' in self.SOPTIONS: add_resources()
+      if 'l' in self.SOPTIONS: self.add_resources()
       # add options to tcsh script for qsub
       for option in self.SOPTIONS:
          buf += "#PBS -" + option
@@ -141,7 +141,7 @@ class TcshQsub(PgLOG):
       del self.SOPTIONS['l']
    
    # add module loads for modules provided
-   def add_modules(res, mods):
+   def add_modules(self, res, mods):
       mbuf = "\n"
       defmods = self.DEFMODS[res] if res in self.DEFMODS else self.DEFMODS['default']
       dmods = re.split(',', defmods)
