@@ -8,7 +8,7 @@ def test_miscs():
    import rda_python_miscs.gdexls
    import rda_python_miscs.pgwget
    import rda_python_miscs.rdacp
-   import rda_python_miscs.rdkill
+   import rda_python_miscs.rdakill
    import rda_python_miscs.rdamod
    import rda_python_miscs.rdaown
    import rda_python_miscs.rdaps
