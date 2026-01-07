@@ -131,7 +131,7 @@ class TcshQsub(PgLOG):
       return buf
    
    # check and add resource options 
-   def add_resources():
+   def add_resources(self):
       for res in re.split(',', self.SOPTIONS['l']):
          ms = re.match(r'^([^=]+)=(.+)$', res)
          if ms:
@@ -164,7 +164,7 @@ class TcshQsub(PgLOG):
       return mbuf
    
    # set virtual machine libraries
-   def set_vm_libs(res):
+   def set_vm_libs(self, res):
       deflibs = self.DEFLIBS[res] if res in self.DEFLIBS else self.DEFLIBS['default']
       if not deflibs: return ''
       dlibs = re.split(',', deflibs)
