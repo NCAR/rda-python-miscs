@@ -1,94 +1,83 @@
 #!/usr/bin/env python3
-#
 ##################################################################################
-#
 #     Title: rdasub
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 03/51/2021
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
 #   Purpose: python script to submit a nohup bachground execution
-#
 #    Github: https://github.com/NCAR/rda-python-miscs.git
-#
 ##################################################################################
 
 import os
 import sys
 import re
 import time
-from rda_python_common import PgLOG
-from rda_python_common import PgFile
-from rda_python_common import PgUtil
+from rda_python_common.pg_file import PgFile
 
-#
-# main function to excecute this script
-#
-def main():
+class RdaSub(PgFile):
 
+   def __init__(self):
+      super().__init__()
+      self.coptions = {'cmd' : None, 'cwd' : None, 'env' : None}       # customized options
+
+# function to read parameters
+def read_parameters(self):
    aname = 'rdasub'
-   PgLOG.set_help_path(__file__)
-   coptions = {'cmd' : None, 'cwd' : None, 'env' : None}       # customized options
-   copts = '|'.join(coptions)
+   self.set_help_path(__file__)
+   copts = '|'.join(self.coptions)
    option = None
    argv = sys.argv[1:]
-   if not argv: PgLOG.show_usage(aname)
-   PgLOG.PGLOG['LOGFILE'] = aname + ".log"
-   PgLOG.cmdlog("{} {}".format(aname, ' '.join(argv)))
-
+   if not argv: self.show_usage(aname)
+   self.PGLOG['LOGFILE'] = aname + ".log"
+   self.cmdlog("{} {}".format(aname, ' '.join(argv)))
    while argv:
       arg = argv.pop(0)
       if arg == "-b":
-         PgLOG.PGLOG['BCKGRND'] = 1
+         self.PGLOG['BCKGRND'] = 1
          option = None
          continue
       ms = re.match(r'^-({})$'.format(copts), arg)
       if ms:
          option = ms.group(1)
          continue
-      if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, aname), PgLOG.LGEREX)
+      if not option: self.pglog("{}: Value passed in without leading option for {}".format(arg, aname), self.LGEREX)
       if arg.find(' ') > -1 and not re.match(r'^[\'\"].*[\'\"]$', arg):   # quote string with space but not quoted yet
          if arg.find("'") > -1:
             arg = '"{}"'.format(arg)
          else:
             arg = "'{}'".format(arg)
-
-      coptions[option] = arg
+      self.coptions[option] = arg
       if option == "cmd": break
       option = None
+   if not self.coptions['cmd']: self.pglog(aname + ": specify command via option -cmd to run", self.LGWNEX)
 
-   if not coptions['cmd']: PgLOG.pglog(aname + ": specify command via option -cmd to run", PgLOG.LGWNEX)
-   args = PgLOG.argv_to_string(argv, 0)   # append command options
-   msg = "{}-{}{}".format(PgLOG.PGLOG['HOSTNAME'], PgLOG.PGLOG['CURUID'], PgLOG.current_datetime())
-   if coptions['cwd']:
-      if coptions['cwd'].find('$'): coptions['cwd'] = PgLOG.replace_environments(coptions['cwd'], '', PgLOG.LGWNEX)
-      msg += "-" + coptions['cwd']
-      PgFile.change_local_directory(coptions['cwd'], PgLOG.LGEREX)
+# function to start actions
+def start_actions(self):
+   args = self.argv_to_string(argv, 0)   # append command options
+   msg = "{}-{}{}".format(self.PGLOG['HOSTNAME'], self.PGLOG['CURUID'], self.current_datetime())
+   if self.coptions['cwd']:
+      if self.coptions['cwd'].find('$'): self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
+      msg += "-" + self.coptions['cwd']
+      self.change_local_directory(self.coptions['cwd'], self.LGEREX)
    else:
-      coptions['cwd'] = PgLOG.PGLOG['CURDIR']
-   cmd = PgLOG.valid_command(coptions['cmd'])
-   if not cmd and not re.match(r'^/', coptions['cmd']): cmd = PgLOG.valid_command('./' + coptions['cmd'])
-   if not cmd: PgLOG.pglog(coptions['cmd'] + ": Cannot find given command to run", PgLOG.LGWNEX)
+      self.coptions['cwd'] = self.PGLOG['CURDIR']
+   cmd = self.valid_command(self.coptions['cmd'])
+   if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
+   if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
    if args: cmd += " " + args
-
    msg += ": " + cmd
-   PgLOG.pglog(msg, PgLOG.LOGWRN)
+   self.pglog(msg, self.LOGWRN)
    os.system("nohup " + cmd + " > /dev/null 2>&1 &")
-   display_process_info(coptions['cmd'], cmd)
+   self.display_process_info(self.coptions['cmd'], cmd)
 
-   sys.exit(0)
-
-#
 # display the the most recent matching process info
-#
-def display_process_info(cname, cmd):
-
+def display_process_info(self, cname, cmd):
    ctime = time.time()
    RTIME = PID = 0
-   pscmd = "ps -u {},{} -f | grep {} | grep ' 1 ' | grep -v ' grep '".format(PgLOG.PGLOG['CURUID'], PgLOG.PGLOG['RDAUSER'], cname)
-
+   pscmd = "ps -u {},{} -f | grep {} | grep ' 1 ' | grep -v ' grep '".format(self.PGLOG['CURUID'], self.PGLOG['RDAUSER'], cname)
    for i in range(2):
-      buf = PgLOG.pgsystem(pscmd, PgLOG.LOGWRN, 20)
+      buf = self.pgsystem(pscmd, self.LOGWRN, 20)
       if buf:
          lines = buf.split("\n")
          for line in lines:
@@ -105,13 +94,11 @@ def display_process_info(cname, cmd):
                      PID = pid
                      RTIME = rtime
       if PID:
-         return PgLOG.pglog("Job <{}> is submitted to background <{}>".format(PID, PgLOG.PgLOG['HOSTNAME']), PgLOG.LOGWRN)
+         return self.pglog("Job <{}> is submitted to background <{}>".format(PID, self.PgLOG['HOSTNAME']), self.LOGWRN)
       elif i == 0:
          time.sleep(2)
       else:
-         return PgLOG.pglog("{}: No job information found, It may have finished".format(cmd), PgLOG.LOGWRN)
+         return self.pglog("{}: No job information found, It may have finished".format(cmd), self.LOGWRN)
 
-#
 # call main() to start program
-#
 if __name__ == "__main__": main()
