@@ -15,7 +15,7 @@ import sys
 from os import path as op
 from rda_python_common.pg_file import PgFile
 
-class RdaMod(Pgfile):
+class RdaMod(PgFile):
 
    def __init__(self):
       super().__init__()

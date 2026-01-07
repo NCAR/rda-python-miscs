@@ -106,7 +106,7 @@ class TcshQsub(PgLOG):
       self.PGLOG['ERR2STD'] = []
 
    # build tcsh script to submit a PBS batch job
-   def build_tcsh_script(cmd):
+   def build_tcsh_script(self, cmd):
       buf = "#!/bin/tcsh\n\n"   # sbatch starting tcsh script
       if 'l' in self.SOPTIONS: add_resources()
       # add options to tcsh script for qsub
