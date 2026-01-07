@@ -14,7 +14,7 @@ import sys
 import time
 from rda_python_common.pg_file import PgFile
 
-class RdaKill(Pgfile):
+class RdaKill(PgFile):
 
    def __init__(self):
       super().__init__()

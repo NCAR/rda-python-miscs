@@ -85,8 +85,8 @@ class RdaCp(PgFile):
    
    # function to start actions
    def start_actions(self):
-      PgDBI.dssdb_dbname()
-      PgDBI.validate_decs_group('rdacp', self.PGLOG['CURUID'], 1)
+      self.dssdb_dbname()
+      self.validate_decs_group('rdacp', self.PGLOG['CURUID'], 1)
       if not self.RDACP['R'] and self.RDACP['r']: self.RDACP['R'] = 1000
       if not self.RDACP['t']:
          self.CINFO['tpath'] = self.RDACP['t'] = "."

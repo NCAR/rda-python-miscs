@@ -20,6 +20,7 @@ class RdaZip(PgFile):
       super().__init__()
       self.action = 0
       self.format = None
+      self.files = []
 
    # function to read parameters
    def read_parameters(self):
@@ -27,7 +28,6 @@ class RdaZip(PgFile):
       self.set_help_path(__file__)
       self.PGLOG['LOGFILE'] = "rdazip.log"   # set different log file
       self.cmdlog("rdazip {}".format(' '.join(argv)))
-      files = []
       option = None
       for arg in argv:
          ms = re.match(r'-(\w+)$', arg)
@@ -43,15 +43,15 @@ class RdaZip(PgFile):
          elif option:
             if self.format: self.pglog("{}: compression format '{}' provided already".format(arg, self.format), self.LGEREX)
             self.format = arg
-            if not files: option = None
+            if not self.files: option = None
          else:
             if not os.path.isfile(arg): self.pglog(arg + ": file not exists", self.LGEREX)
-            files.append(arg)
-      if not files: self.show_usage("rdazip")
+            self.files.append(arg)
+      if not self.files: self.show_usage("rdazip")
 
    # function to start actions
    def start_actions(self):
-      for file in files:
+      for file in self.files:
          self.compress_local_file(file, self.format, self.action, self.LGWNEX)
       self.cmdlog()
 

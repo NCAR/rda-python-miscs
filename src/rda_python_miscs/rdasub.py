@@ -20,6 +20,7 @@ class RdaSub(PgFile):
    def __init__(self):
       super().__init__()
       self.coptions = {'cmd' : None, 'cwd' : None, 'env' : None}       # customized options
+      self.args = None
 
 # function to read parameters
 def read_parameters(self):
@@ -51,10 +52,10 @@ def read_parameters(self):
       if option == "cmd": break
       option = None
    if not self.coptions['cmd']: self.pglog(aname + ": specify command via option -cmd to run", self.LGWNEX)
+   self.args = self.argv_to_string(argv, 0)   # append command options
 
 # function to start actions
 def start_actions(self):
-   args = self.argv_to_string(argv, 0)   # append command options
    msg = "{}-{}{}".format(self.PGLOG['HOSTNAME'], self.PGLOG['CURUID'], self.current_datetime())
    if self.coptions['cwd']:
       if self.coptions['cwd'].find('$'): self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
@@ -65,7 +66,7 @@ def start_actions(self):
    cmd = self.valid_command(self.coptions['cmd'])
    if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
    if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
-   if args: cmd += " " + args
+   if self.args: cmd += " " + self.args
    msg += ": " + cmd
    self.pglog(msg, self.LOGWRN)
    os.system("nohup " + cmd + " > /dev/null 2>&1 &")
@@ -88,7 +89,7 @@ def display_process_info(self, cname, cmd):
                rtm = ms.group(2)
                arg = ms.group(3)
                if not arg or cmd.find(arg) > -1:
-                  rtime = PgUtil.unixtime(rtm + ':00')
+                  rtime = self.unixtime(rtm + ':00')
                   if rtime > ctime: rtime -= 24*60*60
                   if rtime > RTIME:
                      PID = pid
@@ -99,6 +100,13 @@ def display_process_info(self, cname, cmd):
          time.sleep(2)
       else:
          return self.pglog("{}: No job information found, It may have finished".format(cmd), self.LOGWRN)
+
+# main function to excecute this script
+def main():
+   object = RdaSub()
+   object.read_parameters()
+   object.start_actions()
+   object.pgexit(0)
 
 # call main() to start program
 if __name__ == "__main__": main()

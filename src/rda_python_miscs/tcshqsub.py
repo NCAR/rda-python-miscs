@@ -39,29 +39,30 @@ class TcshQsub(PgLOG):
       #   'm' : 'a',
          'm' : 'n',
       }
-      self.gdexsub = PgLOG.BCHCMDS['PBS']
+      self.gdexsub = self.BCHCMDS['PBS']
       self.coptions = {'cmd' : None, 'cwd' : None, 'env' : None, 'mod' : None, 'res' : 'default'}       # customized options
+      self.args = None
 
    # function to read parameters
-   def read_parameters():
+   def read_parameters(self):
       aname = 'tcshqsub'
       pname = 'gdexqsub'
-      PgLOG.set_help_path(__file__)
+      self.set_help_path(__file__)
       copts = '|'.join(self.coptions)
       option = None
       dcount = 0
       argv = sys.argv[1:]
-      if not argv: PgLOG.show_usage(aname)
-      PgLOG.PGLOG['LOGFILE'] = pname + ".log"
-      PgLOG.cmdlog("{} {}".format(aname, ' '.join(argv)))
-      if not PgLOG.valid_command(self.gdexsub): PgLOG.pglog("{}: miss {} command to submit batch job".format(self.gdexsub, PgLOG.PGLOG['PBSNAME']), PgLOG.LGWNEX)
+      if not argv: self.show_usage(aname)
+      self.PGLOG['LOGFILE'] = pname + ".log"
+      self.cmdlog("{} {}".format(aname, ' '.join(argv)))
+      if not self.valid_command(self.gdexsub): self.pglog("{}: miss {} command to submit batch job".format(self.gdexsub, self.PGLOG['PBSNAME']), self.LGWNEX)
       while argv:
          arg = argv.pop(0)
          ms = re.match(r'^-(\w)$', arg)
          if ms:
             option = ms.group(1)
             if option == "b":
-               PgLOG.PGLOG['BCKGRND'] = 1
+               self.PGLOG['BCKGRND'] = 1
                option = None
             else:
                self.SOPTIONS[option] = ''
@@ -71,7 +72,7 @@ class TcshQsub(PgLOG):
             option = ms.group(1)
             if option == "env": option = 'v'
             continue
-         if not option: PgLOG.pglog("{}: Value passed in without leading option for {}".format(arg, self.gdexsub), PgLOG.LGEREX)
+         if not option: self.pglog("{}: Value passed in without leading option for {}".format(arg, self.gdexsub), self.LGEREX)
          if arg.find(' ') > -1 and not re.match(r'^[\'\"].*[\'\"]$', arg):   # quote string with space but not quoted yet
             if arg.find("'") > -1:
                arg = '"{}"'.format(arg)
@@ -83,29 +84,26 @@ class TcshQsub(PgLOG):
          else:
             self.SOPTIONS[option] = arg
          option = None
-      if not self.coptions['cmd']: PgLOG.pglog(aname + ": specify command via option -cmd to run", PgLOG.LGWNEX)
-      args = PgLOG.argv_to_string(argv, 0)   # append command options
-      if not self.SOPTIONS['o']: self.SOPTIONS['o'] = "{}/{}/".format(PgLOG.PGLOG['LOGPATH'], pname)
-      if not self.SOPTIONS['e']: self.SOPTIONS['e'] = "{}/{}/".format(PgLOG.PGLOG['LOGPATH'], pname)
+      self.args = self.argv_to_string(argv, 0)   # append command options
+      if not self.coptions['cmd']: self.pglog(aname + ": specify command via option -cmd to run", self.LGWNEX)
+      if not self.SOPTIONS['o']: self.SOPTIONS['o'] = "{}/{}/".format(self.PGLOG['LOGPATH'], pname)
+      if not self.SOPTIONS['e']: self.SOPTIONS['e'] = "{}/{}/".format(self.PGLOG['LOGPATH'], pname)
       if 'N' not in self.SOPTIONS: self.SOPTIONS['N'] = op.basename(self.coptions['cmd'])
-      msg = "{}-{}{}".format(PgLOG.PGLOG['HOSTNAME'], PgLOG.PGLOG['CURUID'], PgLOG.current_datetime())
       if self.coptions['cwd']:
-         if '$' in self.coptions['cwd']: self.coptions['cwd'] = PgLOG.replace_environments(self.coptions['cwd'], '', PgLOG.LGWNEX)
-         msg += "-" + self.coptions['cwd']
+         if '$' in self.coptions['cwd']: self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
          os.chdir(self.coptions['cwd'])
    
    # fnction to start actions
    def start_actions(self):
-      cmd = PgLOG.valid_command(self.coptions['cmd'])
-      if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = PgLOG.valid_command('./' + self.coptions['cmd'])
-      if not cmd: PgLOG.pglog(self.coptions['cmd'] + ": Cannot find given command to run", PgLOG.LGWNEX)
-      if args: cmd += " " + args
+      cmd = self.valid_command(self.coptions['cmd'])
+      if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
+      if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
+      if self.args: cmd += " " + self.args
       sbuf = build_tcsh_script(cmd)
-      PgLOG.pglog(sbuf, PgLOG.MSGLOG)
-      PgLOG.PGLOG['ERR2STD'] = ['bind mouting']
-      PgLOG.pgsystem(self.gdexsub, PgLOG.LOGWRN, 6, sbuf)
-      PgLOG.PGLOG['ERR2STD'] = []
-      sys.exit(0)
+      self.pglog(sbuf, self.MSGLOG)
+      self.PGLOG['ERR2STD'] = ['bind mouting']
+      self.pgsystem(self.gdexsub, self.LOGWRN, 6, sbuf)
+      self.PGLOG['ERR2STD'] = []
 
    # build tcsh script to submit a PBS batch job
    def build_tcsh_script(cmd):
@@ -121,7 +119,7 @@ class TcshQsub(PgLOG):
          if self.RESOURCES[option]: buf += " {}={}".format(option, self.RESOURCES[option])
          buf += "\n"
       # always include the login user's tcsh resource file
-      homedir = "{}/{}".format(PgLOG.PGLOG['USRHOME'], PgLOG.PGLOG['CURUID'])
+      homedir = "{}/{}".format(self.PGLOG['USRHOME'], self.PGLOG['CURUID'])
       buf += "setenv HOME {}\n".format(homedir)
       buf += "source /etc/profile.d/z00_modules.csh\n"
       buf += "source /glade/u/apps/opt/conda/etc/profile.d/conda.csh\n"
@@ -139,7 +137,7 @@ class TcshQsub(PgLOG):
          if ms:
             self.RESOURCES[ms.group(1)] = ms.group(2)
          else:
-            PgLOG.pglog(res + ": use '=' to separate resource name & value", PgLOG.LGEREX)
+            self.pglog(res + ": use '=' to separate resource name & value", self.LGEREX)
       del self.SOPTIONS['l']
    
    # add module loads for modules provided

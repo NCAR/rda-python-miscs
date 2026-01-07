@@ -41,6 +41,7 @@ class BashQsub(PgLOG):
       }
       self.coptions = {'cmd' : None, 'cwd' : None, 'env' : None, 'mod' : None, 'res' : 'default'}       # customized options
       self.gdexsub = self.BCHCMDS['PBS']
+      self.args = None
 
    # function to readparameters
    def read_parameters(self):
@@ -83,15 +84,13 @@ class BashQsub(PgLOG):
          else:
             self.SOPTIONS[option] = arg
          option = None
+      self.args = self.argv_to_string(argv, 0)   # append command options
       if not self.coptions['cmd']: self.pglog(aname + ": specify command via option -cmd to run", self.LGWNEX)
-      args = self.argv_to_string(argv, 0)   # append command options
       if not self.SOPTIONS['o']: self.SOPTIONS['o'] = "{}/{}/".format(self.PGLOG['LOGPATH'], pname)
       if not self.SOPTIONS['e']: self.SOPTIONS['e'] = "{}/{}/".format(self.PGLOG['LOGPATH'], pname)
       if 'N' not in self.SOPTIONS: self.SOPTIONS['N'] = op.basename(self.coptions['cmd'])
-      msg = "{}-{}{}".format(self.PGLOG['HOSTNAME'], self.PGLOG['CURUID'], self.current_datetime())
       if self.coptions['cwd']:
          if 's' in self.coptions['cwd']: self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
-         msg += "-" + self.coptions['cwd']
          os.chdir(self.coptions['cwd'])
    
    # function to start actions
@@ -99,7 +98,7 @@ class BashQsub(PgLOG):
       cmd = self.valid_command(self.coptions['cmd'])
       if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
       if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
-      if args: cmd += " " + args
+      if self.args: cmd += " " + self.args
       sbuf = self.build_bash_script(cmd)
       self.pglog(sbuf, self.MSGLOG)
       self.PGLOG['ERR2STD'] = ['bind mouting']
