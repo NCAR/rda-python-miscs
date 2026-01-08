@@ -27,24 +27,24 @@ class GdexLs(PgSplit):
       self.WIDTHS = [0, 0, 0]   # WIDTHS for formated display
       self.ALIGNS = [0, 1, 1]   # alignment, 0 - left; 1 - right
       self.GDEXLS = {
-         'd' : 0,     # 1 to list directory information only
-         'f' : 0,     # 1 to list file information only
-         'N' : 0,     # 1 to list files unformatted
-         'r' : 0,     # 1 if recursive all
-         'R' : 0,     # > 0 to set recursive limit
-         'D' : None,  # specify delimiting symbols, default to '  '
+         'd': 0,     # 1 to list directory information only
+         'f': 0,     # 1 to list file information only
+         'N': 0,     # 1 to list files unformatted
+         'r': 0,     # 1 if recursive all
+         'R': 0,     # > 0 to set recursive limit
+         'D': None,  # specify delimiting symbols, default to '  '
       }
       self.LINFO = {
-         'files' : [],
-         'curdir' : None,
-         'tpath' : None,
-         'dhome' : None,
-         'dsid' : None,
-         'dcnt' : 0,
-         'gcnt' : 0,
-         'fcnt' : 0,
-         'pcnt' : 0,
-         'pgrecs' : []
+         'files': [],
+         'curdir': None,
+         'tpath': None,
+         'dhome': None,
+         'dsid': None,
+         'dcnt': 0,
+         'gcnt': 0,
+         'fcnt': 0,
+         'pcnt': 0,
+         'pgrecs': []
       }
 
    # function to read parameters
@@ -75,7 +75,7 @@ class GdexLs(PgSplit):
             else:
                self.GDEXLS[option] = arg
             option = defopt
-   
+
    # functio to start actions
    def start_actions(self):   
       self.view_dbinfo()
@@ -149,7 +149,7 @@ class GdexLs(PgSplit):
             getwfile = 0
       if getwfile:
          self.LINFO['dsid'] = self.find_dataset_id(file)
-         if self.LINFO['dsid'] == None: return     # skip for missing dsid
+         if self.LINFO['dsid'] is None: return     # skip for missing dsid
          pgrec = self.pgget("dataset", "title, (dwebcnt + nwebcnt) nc, (dweb_size + nweb_size) ns", "dsid = '{}'".format(self.LINFO['dsid']), self.LGEREX)
          if not pgrec: return None
          self.LINFO['dhome'] = "{}/{}".format(self.PGLOG['DSDHOME'], self.LINFO['dsid'])

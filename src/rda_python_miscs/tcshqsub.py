@@ -20,27 +20,26 @@ class TcshQsub(PgLOG):
    def __init__(self):
       super().__init__()
       self.DEFMODS = {
-         'default' : "ncarenv,netcdf,ncl,nco,cdo,conda,grib-util,wgrib2",
+         'default': "ncarenv,netcdf,ncl,nco,cdo,conda,grib-util,wgrib2"
       }
       self.DEFLIBS = {
-         'default' : "conda activate /glade/work/gdexdata/conda-envs/pg-gdex",
+         'default': "conda activate /glade/work/gdexdata/conda-envs/pg-gdex"
       }
-      self.SWAPMODS = {
-      }
+      self.SWAPMODS = {}
       self.RESOURCES = {   # resource list for option -l
-         'walltime' : '6:00:00',   # if this is changed, change defpbstime in PgCheck.py too
-         'select' : '1:ncpus=1:mem=1gb'
+         'walltime': '6:00:00',   # if this is changed, change defpbstime in PgCheck.py too
+         'select': '1:ncpus=1:mem=1gb'
       }
       self.SOPTIONS = {   # single-dash option values
-         'o' : None,    # will set to default if not provided
-         'e' : None,
-         'A' : "P43713000",
-         'q' : "gdex@casper-pbs",
-      #   'm' : 'a',
-         'm' : 'n',
+         'o': None,    # will set to default if not provided
+         'e': None,
+         'A': "P43713000",
+         'q': "gdex@casper-pbs",
+      #   'm': 'a',
+         'm': 'n',
       }
       self.gdexsub = self.BCHCMDS['PBS']
-      self.coptions = {'cmd' : None, 'cwd' : None, 'env' : None, 'mod' : None, 'res' : 'default'}       # customized options
+      self.coptions = {'cmd': None, 'cwd': None, 'env': None, 'mod': None, 'res': 'default'}       # customized options
       self.args = None
 
    # function to read parameters
@@ -50,7 +49,6 @@ class TcshQsub(PgLOG):
       self.set_help_path(__file__)
       copts = '|'.join(self.coptions)
       option = None
-      dcount = 0
       argv = sys.argv[1:]
       if not argv: self.show_usage(aname)
       self.PGLOG['LOGFILE'] = pname + ".log"
@@ -92,7 +90,7 @@ class TcshQsub(PgLOG):
       if self.coptions['cwd']:
          if '$' in self.coptions['cwd']: self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
          os.chdir(self.coptions['cwd'])
-   
+
    # fnction to start actions
    def start_actions(self):
       cmd = self.valid_command(self.coptions['cmd'])
@@ -129,7 +127,7 @@ class TcshQsub(PgLOG):
       buf += self.set_vm_libs(self.coptions['res'])
       buf += "\necho {}\n{}\n\ndate\n".format(cmd, cmd)
       return buf
-   
+
    # check and add resource options 
    def add_resources(self):
       for res in re.split(',', self.SOPTIONS['l']):
@@ -139,7 +137,7 @@ class TcshQsub(PgLOG):
          else:
             self.pglog(res + ": use '=' to separate resource name & value", self.LGEREX)
       del self.SOPTIONS['l']
-   
+
    # add module loads for modules provided
    def add_modules(self, res, mods):
       mbuf = "\n"
@@ -162,7 +160,7 @@ class TcshQsub(PgLOG):
                if smod in self.SWAPMODS: mbuf += "module unload {}\n".format(self.SWAPMODS[smod])
                mbuf += "module load {}\n".format(amod)
       return mbuf
-   
+
    # set virtual machine libraries
    def set_vm_libs(self, res):
       deflibs = self.DEFLIBS[res] if res in self.DEFLIBS else self.DEFLIBS['default']
