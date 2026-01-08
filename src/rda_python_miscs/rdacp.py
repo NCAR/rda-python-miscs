@@ -19,29 +19,29 @@ class RdaCp(PgFile):
    def __init__(self):
       super().__init__()
       self.RDACP = {
-         'fh' : None,   # from host name, default to localhost
-         'th' : None,   # to host name, defaul to localhost
-         'fb' : None,   # from bucket name for a from file in Object Store
-         'tb' : None,   # to bucket name for a to file in Object Store
-         'fp' : None,   # from Globus endpoint
-         'tp' : None,   # to Globus endpoint
-         'f' : [],      # from file names
-         't' : None,    # to file name
-         'r' : 0,       # 1 if recursive all
-         'R' : 0,       # > 0 to set recursive limit
-         'F' : 0o664,   # to file mode, default to 664
-         'D' : 0o775,   # to directory mode, default to 775
+         'fh': None,   # from host name, default to localhost
+         'th': None,   # to host name, defaul to localhost
+         'fb': None,   # from bucket name for a from file in Object Store
+         'tb': None,   # to bucket name for a to file in Object Store
+         'fp': None,   # from Globus endpoint
+         'tp': None,   # to Globus endpoint
+         'f': [],      # from file names
+         't': None,    # to file name
+         'r': 0,       # 1 if recursive all
+         'R': 0,       # > 0 to set recursive limit
+         'F': 0o664,   # to file mode, default to 664
+         'D': 0o775,   # to directory mode, default to 775
       }
       self.CINFO = {
-         'tcnt' : 0,
-         'htcnt' : 0,
-         'cpflag' : 0,    # 1 file only, 2 directory only, 3 both
-         'cpstr' : ['', 'Files', 'Directories', 'Files/Directories'],
-         'fpath' : None,
-         'tpath' : None,
-         'fhost' : '',
-         'thost' : '',
-         'curdir' : os.getcwd()
+         'tcnt': 0,
+         'htcnt': 0,
+         'cpflag': 0,    # 1 file only, 2 directory only, 3 both
+         'cpstr': ['', 'Files', 'Directories', 'Files/Directories'],
+         'fpath': None,
+         'tpath': None,
+         'fhost': '',
+         'thost': '',
+         'curdir': os.getcwd()
       }
 
    # function to read parameters

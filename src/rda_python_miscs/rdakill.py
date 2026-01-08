@@ -19,14 +19,14 @@ class RdaKill(PgFile):
    def __init__(self):
       super().__init__()
       self.RDAKILL = {
-         'a' : None,    # application name
-         'h' : None,    # hostname
-         'p' : 0,       # process id to be killed
-         'P' : 0,       # parent pid
-         'r' : 0,       # 1 - reserved for exclusive, working with -s PEND only 
-         'u' : None,    # login user name
-         's' : None,    # batch status to kill
-         'q' : None     # batch partition/queue for SLURM/PBS, rda for default
+         'a': None,    # application name
+         'h': None,    # hostname
+         'p': 0,       # process id to be killed
+         'P': 0,       # parent pid
+         'r': 0,       # 1 - reserved for exclusive, working with -s PEND only 
+         'u': None,    # login user name
+         's': None,    # batch status to kill
+         'q': None     # batch partition/queue for SLURM/PBS, rda for default
       }
 
    # function to read parameters
@@ -217,7 +217,7 @@ class RdaKill(PgFile):
    def record_dscheck_interrupt(self, pid, host):
       pgrec = self.pgget("dscheck", "cindex", "pid = {} AND hostname = '{}'".format(pid, host), self.LOGERR)
       if pgrec:
-         record = {'chktime' : int(time.time()), 'status' : 'I', 'pid' : 0}   # release lock
+         record = {'chktime': int(time.time()), 'status': 'I', 'pid': 0}   # release lock
          self.pgupdt("dscheck", record, "cindex = {}".format(pgrec['cindex']), self.LGEREX)
 
 # main function to excecute this script

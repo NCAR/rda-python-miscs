@@ -20,20 +20,20 @@ class RdaMod(PgFile):
    def __init__(self):
       super().__init__()
       self.RDAMOD = {
-         'd' : 0,     # 1 to change directory mode
-         'f' : 0,     # 1 to change file mode
-         'h' : 0,     # 1 to show help message
-         'r' : 0,     # 1 if recursive all
-         'R' : 0,     # > 0 to set recursive limit
-         'F' : 0o664,   # to chnage file mode, default to 664
-         'D' : 0o775,   # to chnge directory mode, default to 775
+         'd': 0,     # 1 to change directory mode
+         'f': 0,     # 1 to change file mode
+         'h': 0,     # 1 to show help message
+         'r': 0,     # 1 if recursive all
+         'R': 0,     # > 0 to set recursive limit
+         'F': 0o664,   # to chnage file mode, default to 664
+         'D': 0o775,   # to chnge directory mode, default to 775
       }
       self.MINFO = {
-         'files' : [],
-         'curdir' : os.getcwd(),
-         'tpath' : None,
-         'dcnt' : 0,
-         'fcnt' : 0
+         'files': [],
+         'curdir': os.getcwd(),
+         'tpath': None,
+         'dcnt': 0,
+         'fcnt': 0
       }
 
    # function to read parameters
