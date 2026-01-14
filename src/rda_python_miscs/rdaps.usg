@@ -7,7 +7,7 @@
       - Option -a, application name of the process;
 
       - Option -h, hostname the process is on; omit it for local process,
-        but it is mandatory if the process id is a SLURM/PBS bactch id.
+        but it is mandatory if the process id is a PBS bactch id.
 
       - Option -p, the local process or batch job id to be checked;
 

@@ -64,10 +64,7 @@ class RdaPs(PgFile):
       chkloc = 1
       if self.RDAPS['h']:
          self.local_host_action(self.RDAPS['h'], "check processes", self.PGLOG['HOSTNAME'], self.LGEREX)
-         if not self.pgcmp(self.RDAPS['h'], self.PGLOG['SLMNAME'], 1):
-            self.slurm_snapshot()
-            chkloc = 0
-         elif not self.pgcmp(self.RDAPS['h'], self.PGLOG['PBSNAME'], 1):
+         if not self.pgcmp(self.RDAPS['h'], self.PGLOG['PBSNAME'], 1):
             self.pbs_snapshot()
             chkloc = 0
       if chkloc: self.process_snapshot()
@@ -96,40 +93,7 @@ class RdaPs(PgFile):
             if self.RDAPS['P'] and self.RDAPS['P'] != ppid: continue
             if self.RDAPS['a'] and aname.find(self.RDAPS['a']) < 0: continue
             self.pglog(re.sub(r'  +', ' ', line), self.LOGWRN)
-   
-   # get a snapshot of a SLURM batch process status
-   def slurm_snapshot(self):
-      qopts = ''
-      if self.RDAPS['u']: qopts += " -u " + self.RDAPS['u']
-      if self.RDAPS['p']:
-         qopts += " -j {}".format(self.RDAPS['p'])
-      else:
-         qopts =  " -p rda"
-      cmd = "squeue -l" + qopts
-      buf = self.pgsystem(cmd, self.LOGWRN, 272)
-      if not buf:
-         if self.PGLOG['SYSERR'] and self.PGLOG['SYSERR'].find('Invalid job id specified') < 0:
-            self.pglog(self.PGLOG['SYSERR'], self.LGEREX)
-         return
-      lines = re.split(r'\n', buf)
-      lcnt = len(lines)
-      if lcnt < 3: return
-      dochk = 1
-      for line in lines:
-         if not line: continue
-         if dochk:
-            if re.match(r'^\s*JOBID\s', line): dochk = 0
-         else:
-            vals = re.split(r'\s+', self.pgtrim(line))
-            if self.RDAPS['a'] and vals[2] and self.RDAPS['a'] != vals[2]: continue
-            # move user name to front
-            val = vals[3]
-            vals[3] = vals[2]
-            vals[2] = vals[1]
-            vals[1] = vals[0]
-            vals[0] = val
-            self.pglog(' '.join(vals), self.LOGWRN)
-   
+
    # get a snapshot of a PBS batch process status
    def pbs_snapshot(self):
       qopts = ''
@@ -138,7 +102,7 @@ class RdaPs(PgFile):
       if self.RDAPS['p']:
          if qopts: qopts += ' '
          qopts += str(self.RDAPS['p'])
-      if not qopts: qopts = 'rda'
+      if not qopts: qopts = 'gdex'
       stat = self.get_pbs_info(qopts, 1, self.LOGWRN)
       if not stat:
          if self.PGLOG['SYSERR']: self.pglog(self.PGLOG['SYSERR'], self.LGEREX)

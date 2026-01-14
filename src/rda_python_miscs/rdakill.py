@@ -26,7 +26,7 @@ class RdaKill(PgFile):
          'r': 0,       # 1 - reserved for exclusive, working with -s PEND only 
          'u': None,    # login user name
          's': None,    # batch status to kill
-         'q': None     # batch partition/queue for SLURM/PBS, rda for default
+         'q': None     # batch partition/queue for PBS, rda for default
       }
 
    # function to read parameters
@@ -71,15 +71,7 @@ class RdaKill(PgFile):
       killloc = 1
       if self.RDAKILL['h']:
          self.local_host_action(self.RDAKILL['h'], "kill processes", self.PGLOG['HOSTNAME'], self.LGEREX)
-         if not self.pgcmp(self.RDAKILL['h'], self.PGLOG['SLMNAME'], 1):
-            if not (self.RDAKILL['p'] or self.RDAKILL['s']):
-               self.pglog("Provide Batch ID or Job Status to kill SLURM jobs", self.LGEREX)
-            if self.RDAKILL['p']:
-               self.dakill_slurm_batch(self.RDAKILL['p'])
-            else:
-               self.rdakill_slurm_status(self.RDAKILL['s'], self.RDAKILL['q'], self.RDAKILL['u'])
-            killloc = 0
-         elif not self.pgcmp(self.RDAKILL['h'], self.PGLOG['PBSNAME'], 1):
+         if not self.pgcmp(self.RDAKILL['h'], self.PGLOG['PBSNAME'], 1):
             if not (self.RDAKILL['p'] or self.RDAKILL['s']):
                self.pglog("Provide Batch ID or Job Status to kill PBS jobs", self.LGEREX)
             if self.RDAKILL['p']:
@@ -127,7 +119,6 @@ class RdaKill(PgFile):
             buf += "on " + self.RDAKILL['h']
          else:
             buf += "locally"
-            if self.PGLOG['CURBID']: buf += "; add Option '-h SLURM' if SLURM batch ID provided"
          self.pglog(buf, self.LOGWRN)
    
    # a local child process
@@ -139,41 +130,7 @@ class RdaKill(PgFile):
          elif self.check_process(pid):
             return self.pglog("Error Kill: {}\n{}".format(line, self.PGLOG['SYSERR']), self.LOGWRN)
       if not self.check_process(pid): self.pglog("Quit: " + line, self.LOGWRN)
-   
-   # kill a slurm batch job
-   def rdakill_slurm_batch(self, bid):
-      ret = 0
-      stat = self.check_slurm_status(bid, self.LOGWRN)
-      if stat:
-         cmd = self.get_local_command("scancel {}".format(bid), stat['USER'])
-         ret = self.pgsystem(cmd, self.LOGWRN, 6)
-         if ret: self.record_dscheck_interrupt(bid, self.PGLOG['SLMNAME'])
-      else:
-         self.pglog("{}: cannot find SLURM batch ID".format(bid), self.LOGERR)
-      if not ret and self.PGLOG['SYSERR']: self.pglog(self.PGLOG['SYSERR'], self.LGEREX)
-      return ret
-   
-   # kill SLURM batch jobs for given status
-   def rdakill_slurm_status(self, stat, part, uname):
-      if not part: part = 'rda'
-      bcmd = "sacct -o jobid,user,state -r {} -".format(part)
-      bcmd += ("u " + uname if uname else 'a')
-      lines = self.get_slurm_multiple(bcmd)
-      bcnt = len(lines['JOBID']) if lines else 0
-      pcnt = kcnt = 0
-      for i in range(bcnt):
-         if lines['STATE'][i] == stat:
-            pcnt += 1
-            kcnt += self.rdakill_slurm_batch(lines['JOBID'][i])
-      if pcnt > 0:
-         s = 's' if pcnt > 1 else ''
-         line = "{} of {} SLURM '{}' job{} Killed".format(kcnt, pcnt, stat, s)
-      else:
-         line = "No SLURM '{}' job found to kill".format(stat)
-      line += " in Partition '{}'".format(part)
-      if uname: line += " for " + uname
-      self.pglog(line, self.LOGWRN)
-   
+
    # kill a pbs batch job
    def rdakill_pbs_batch(self, bid):
       ret = 0
@@ -188,7 +145,7 @@ class RdaKill(PgFile):
          self.pglog("{}: cannot find PBS batch ID".format(bid), self.LOGERR)
       if not ret and self.PGLOG['SYSERR']: self.pglog(self.PGLOG['SYSERR'], self.LGEREX)
       return ret
-   
+
    # kill PBS batch jobs for given status
    def rdakill_pbs_status(self, stat, queue, uname):
       if not queue: queue = 'rda'
