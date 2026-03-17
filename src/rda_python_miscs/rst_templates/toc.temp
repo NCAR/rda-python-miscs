@@ -1,0 +1,21 @@
+################################################################################
+#
+#     Title : toc.temp
+#    Author : Zaihua Ji,  zji@ucar.edu
+#      Date : 03/17/2026
+#   Purpose : template file for help document toc.rst (table of contents, RST)
+#
+# Work File : $DSSHOME/lib/templates/toc.temp
+#
+################################################################################
+
+.. _toc:
+
+====================
+__TITLE__ Guide
+====================
+
+Table of Contents
+-----------------
+
+__TOC__

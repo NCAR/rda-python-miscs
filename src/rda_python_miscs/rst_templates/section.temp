@@ -1,0 +1,23 @@
+################################################################################
+#
+#     Title : section.temp
+#    Author : Zaihua Ji,  zji@ucar.edu
+#      Date : 03/17/2026
+#   Purpose : template file for help document section.rst (reStructuredText)
+#
+# Work File : $DSSHOME/lib/templates/section.temp
+#
+################################################################################
+
+.. _section__SECID__:
+
+__SECID__ - __TITLE__
+=====================
+
+__SECTION__
+
+.. raw:: html
+
+   <br>
+
+:ref:`Back to Top <index>`

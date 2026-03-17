@@ -1,0 +1,29 @@
+################################################################################
+#
+#     Title : index.temp
+#    Author : Zaihua Ji,  zji@ucar.edu
+#      Date : 03/17/2026
+#   Purpose : template file for help document index.rst (reStructuredText)
+#
+# Work File : $DSSHOME/lib/templates/index.temp
+#
+################################################################################
+
+.. _index:
+
+============================
+A GUIDE TO __TITLE__
+============================
+
+.. contents:: Table of Contents
+   :depth: 2
+   :local:
+
+See the :doc:`toc` for the full table of contents.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents
+
+   toc
+   section__SECID__
