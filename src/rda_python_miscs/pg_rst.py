@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 ###############################################################################
 #
@@ -14,6 +15,9 @@
 #
 import os
 import re
+import inspect
+import argparse
+import importlib
 from os import path as op
 import PgLOG
 from rda_python_common.pg_file import PgFile
@@ -1123,3 +1127,95 @@ class PgRST(PgFile, PgUtil):
          if section['secid'] == secid: return section
 
       PgLOG.pglog("Unknown Section ID {}".format(secid), PgLOG.LGWNEX)
+
+
+# ---------------------------------------------------------------------------
+# Command-line entry point
+# ---------------------------------------------------------------------------
+
+def _load_opts_alias(docname):
+   """Import ``rda_python_<docname>`` and return its ``(OPTS, ALIAS)`` pair.
+
+   Resolution order:
+
+   1. Module-level ``OPTS`` / ``ALIAS`` attributes.
+   2. The first class *defined in that module* that carries both ``OPTS``
+      and ``ALIAS`` as class-level attributes.
+
+   ``ALIAS`` is optional; an empty dict is returned when not found.
+
+   Args:
+      docname (str): Short document name used to build the module name
+                     ``rda_python_<docname>``.
+
+   Returns:
+      tuple[dict, dict]: ``(OPTS, ALIAS)`` ready to pass to
+      :meth:`PgRST.process_docs`.
+
+   Raises:
+      SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the module
+                  cannot be imported or ``OPTS`` cannot be found.
+   """
+   modname = "rda_python_{}".format(docname)
+   try:
+      mod = importlib.import_module(modname)
+   except ImportError as exc:
+      PgLOG.pglog(
+         "Cannot import module '{}': {}".format(modname, exc),
+         PgLOG.LGWNEX,
+      )
+
+   # 1. Try module-level attributes first.
+   opts  = getattr(mod, 'OPTS',  None)
+   alias = getattr(mod, 'ALIAS', None)
+
+   # 2. Fall back to the first class in the module that owns both.
+   if opts is None or alias is None:
+      for _, obj in inspect.getmembers(mod, inspect.isclass):
+         if obj.__module__ == modname:
+            cls_opts  = getattr(obj, 'OPTS',  None)
+            cls_alias = getattr(obj, 'ALIAS', None)
+            if cls_opts is not None:
+               if opts  is None: opts  = cls_opts
+               if alias is None: alias = cls_alias
+               break
+
+   if opts is None:
+      PgLOG.pglog(
+         "Module '{}' does not define OPTS (checked module level and "
+         "all classes defined in the module)".format(modname),
+         PgLOG.LGWNEX,
+      )
+
+   # ALIAS is optional; default to empty dict.
+   if alias is None:
+      alias = {}
+
+   return opts, alias
+
+
+if __name__ == '__main__':
+   parser = argparse.ArgumentParser(
+      description=(
+         "Generate RST documentation from a structured .usg source document.\n\n"
+         "OPTS and ALIAS are loaded from the module rda_python_<docname>.py: "
+         "the module is searched first for module-level OPTS/ALIAS variables, "
+         "then for a class defined in that module that carries both as class "
+         "attributes."
+      ),
+      formatter_class=argparse.RawDescriptionHelpFormatter,
+   )
+   parser.add_argument(
+      'docname',
+      help=(
+         "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
+         "The module rda_python_<docname>.py must be importable and must "
+         "define OPTS (and optionally ALIAS) either at module level or as "
+         "class attributes."
+      ),
+   )
+   args = parser.parse_args()
+
+   opts, alias = _load_opts_alias(args.docname)
+   pg = PgRST()
+   pg.process_docs(args.docname, opts, alias)
