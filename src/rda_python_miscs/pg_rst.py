@@ -112,15 +112,13 @@ class PgRST(PgFile, PgUtil):
       self.DOCS = {
          'ORIGIN' : os.getcwd(), # directory to the original document
          'TMPDIR' : op.join(op.dirname(op.abspath(__file__)), "rst_templates"), # directory to find the templates
-         'DCROOT' : None, # root directory to rst documents
-         'DOCDIR' : "", # directory to final rst documents
+         'DOCDIR' : os.getcwd(), # root/final directory for rst documents
          'DOCNAM' : "", # document name: dsarch, dsupdt, etc.
          'DOCTIT' : "", # document name in upper case letters
          'DOCLNK' : None,
       }
 
       self.LINKS = ['dsarch', 'dsupdt', 'dsrqst', 'dscheck']
-      self.DOCS['DCROOT'] = os.getcwd()
 
    #
    # Function process_docs(docname: document name, 'dsarch', 'dsupdt'
@@ -150,7 +148,7 @@ class PgRST(PgFile, PgUtil):
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
-      self.DOCS['DOCDIR'] = "{}/{}".format(self.DOCS['DCROOT'], docname)
+      self.DOCS['DOCDIR'] = "{}/{}".format(self.DOCS['DOCDIR'], docname)
 
       self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
       PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
@@ -1235,5 +1233,5 @@ if __name__ == '__main__':
    pg = PgRST()
    pg.DOCS['ORIGIN'] = origin
    if args.docdir is not None:
-      pg.DOCS['DCROOT'] = args.docdir
+      pg.DOCS['DOCDIR'] = args.docdir
    pg.process_docs(args.docname, opts, alias)
