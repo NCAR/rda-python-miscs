@@ -1220,13 +1220,13 @@ if __name__ == '__main__':
       ),
    )
    parser.add_argument(
-      '--dcroot',
+      '--docdir',
       default=None,
       metavar='DIR',
       help=(
          "Root directory under which the per-document RST output directory "
          "is created (default: current working directory).  "
-         "The final output lands in <dcroot>/<docname>/."
+         "The final output lands in <docdir>/<docname>/."
       ),
    )
    args = parser.parse_args()
@@ -1234,6 +1234,6 @@ if __name__ == '__main__':
    opts, alias, origin = _load_opts_alias(args.docname)
    pg = PgRST()
    pg.DOCS['ORIGIN'] = origin
-   if args.dcroot is not None:
-      pg.DOCS['DCROOT'] = args.dcroot
+   if args.docdir is not None:
+      pg.DOCS['DCROOT'] = args.docdir
    pg.process_docs(args.docname, opts, alias)
