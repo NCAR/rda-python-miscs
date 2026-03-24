@@ -110,7 +110,7 @@ class PgRST(PgFile, PgUtil):
 
       # global info to be used by the whole application
       self.DOCS = {
-         'ORIGIN' : PgLOG.PGLOG['DSSHOME'] + "/dssdb/prog_usage", # directory to the original document
+         'ORIGIN' : os.getcwd(), # directory to the original document
          'TMPDIR' : "./rst_templates",                              # directory to find the templates
          'DCROOT' : None, # root directory to rst documents
          'DOCDIR' : "", # directory to final rst documents
@@ -120,7 +120,7 @@ class PgRST(PgFile, PgUtil):
       }
 
       self.LINKS = ['dsarch', 'dsupdt', 'dsrqst', 'dscheck']
-      self.DOCS['DCROOT'] = PgLOG.get_environment("WEBROOT", PgLOG.PGLOG['DSSWEB']) + "/rstdocs"
+      self.DOCS['DCROOT'] = os.getcwd()
 
    #
    # Function process_docs(docname: document name, 'dsarch', 'dsupdt'
