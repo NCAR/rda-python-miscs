@@ -19,7 +19,7 @@ import inspect
 import argparse
 import importlib
 from os import path as op
-import PgLOG
+from rda_python_common.pg_LOG import PgLOG
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
 
@@ -142,17 +142,17 @@ class PgRST(PgFile, PgUtil):
       self.ALIAS = alias
 
       self.parse_docs(docname)
-      if not self.sections: PgLOG.pglog(docname + ": empty document", PgLOG.LGWNEX)
+      if not self.sections: self.pglog(docname + ": empty document", self.LGWNEX)
 
       self.DOCS['DOCNAM'] = docname
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
-      self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
-      PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
+      self.change_local_directory(self.DOCS['DOCDIR'], self.LGWNEX)
+      self.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), self.LOGWRN)
 
       if op.exists("index.rst"):  # write index file once
-         PgLOG.pglog("index.rst exists already, delete first if needs to be regenerated", PgLOG.LOGWRN)
+         self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
       else:
          self.write_index(self.sections[0])
 
@@ -176,7 +176,7 @@ class PgRST(PgFile, PgUtil):
          docname (str): Short document name used to locate ``<ORIGIN>/<docname>.usg``.
       """
       docfile = "{}/{}.usg".format(self.DOCS['ORIGIN'], docname)
-      PgLOG.pglog("Parsing info for Document '{}'".format(docname), PgLOG.LOGWRN)
+      self.pglog("Parsing info for Document '{}'".format(docname), self.LOGWRN)
       section = self.init_section('0', "Preface")
       option = example = None
       fh = open(docfile, 'r')
@@ -227,11 +227,11 @@ class PgRST(PgFile, PgUtil):
       # check completion of options
       for opt in self.OPTS:
          if opt not in self.options:
-            PgLOG.pglog("Missing option Entry -{} (-{}) in Document '{}'".format(opt, self.OPTS[opt][1], docname), PgLOG.LOGWRN)
+            self.pglog("Missing option Entry -{} (-{}) in Document '{}'".format(opt, self.OPTS[opt][1], docname), self.LOGWRN)
       if self.sections:
          cnt = len(self.sections)
          s = 's' if cnt > 1 else ''
-         PgLOG.pglog("{} Section{} gathered for '{}'".format(cnt, s, docname), PgLOG.LOGWRN)
+         self.pglog("{} Section{} gathered for '{}'".format(cnt, s, docname), self.LOGWRN)
 
    #
    # cache section information
@@ -369,7 +369,7 @@ class PgRST(PgFile, PgUtil):
       types = ("Mode", "Info", "Info", "Action")
 
       if opt not in self.OPTS:
-         PgLOG.pglog("{} -- option not defined for {}".format(opt, self.DOCS['DOCNAM']), PgLOG.LGWNEX)
+         self.pglog("{} -- option not defined for {}".format(opt, self.DOCS['DOCNAM']), self.LGWNEX)
       option['secid'] = secid
       option['opt'] = opt
       ms = re.match(r'^(, | \(Alias: .*\), )(.*)', desc)
@@ -489,15 +489,15 @@ class PgRST(PgFile, PgUtil):
          matches = re.findall(r'__([A-Z]+)__', line)
          if matches:
             for key in matches:
-               if key not in hash: PgLOG.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), PgLOG.LGWNEX)
-               if not hash[key]: PgLOG.pglog(key + ": empty content", PgLOG.LGWNEX)
+               if key not in hash: self.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), self.LGWNEX)
+               if not hash[key]: self.pglog(key + ": empty content", self.LGWNEX)
                line = line.replace("__{}__".format(key), hash[key])
          rf.write(line + "\n")
          line = tf.readline()
 
       tf.close()
       rf.close()
-      PgLOG.pglog("{}{}.rst created from {}.rst.temp".format(template, extra, template), PgLOG.LOGWRN)
+      self.pglog("{}{}.rst created from {}.rst.temp".format(template, extra, template), self.LOGWRN)
 
    #
    # create rst content for table of contents
@@ -778,7 +778,7 @@ class PgRST(PgFile, PgUtil):
          str: RST-formatted description content.
       """
       if desc == "\n": return ''
-      ptype = 0   # paragraph type: 0 - normal, 1 - table, 2 - synopsis
+      ptype = 0   # paragraph type: 0 - normal, 1 - table, 2 = synopsis
       content = ''
       cnt = 0
       alllines = re.split(r'\n', desc)
@@ -1080,7 +1080,7 @@ class PgRST(PgFile, PgUtil):
          for alias in self.ALIAS[opt]:
              if re.match(r'^{}$'.format(alias), p, re.I): return opt
 
-      PgLOG.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), PgLOG.LGWNEX)
+      self.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), self.LGWNEX)
 
    #
    # replace with rst link for a given section title
@@ -1118,7 +1118,7 @@ class PgRST(PgFile, PgUtil):
       for section in self.sections:
          if section['secid'] == secid: return section
 
-      PgLOG.pglog("Unknown Section ID {}".format(secid), PgLOG.LGWNEX)
+      self.pglog("Unknown Section ID {}".format(secid), self.LGWNEX)
 
 
 # ---------------------------------------------------------------------------
@@ -1195,41 +1195,46 @@ def _load_opts_alias(docname):
    return opts, alias, origin
 
 
-if __name__ == '__main__':
-   parser = argparse.ArgumentParser(
-      description=(
-         "Generate RST documentation from a structured .usg source document.\n\n"
-         "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
-         "the module is searched first for module-level OPTS/ALIAS variables, "
-         "then for a class defined in that module that carries both as class "
-         "attributes."
-      ),
-      formatter_class=argparse.RawDescriptionHelpFormatter,
-   )
-   parser.add_argument(
-      'docname',
-      help=(
-         "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
-         "The module rda_python_<docname>/<docname>.py must be importable "
-         "and must define OPTS (and optionally ALIAS) either at module "
-         "level or as class attributes."
-      ),
-   )
-   parser.add_argument(
-      '--docdir',
-      default=None,
-      metavar='DIR',
-      help=(
-         "Root directory under which the per-document RST output directory "
-         "is created (default: current working directory).  "
-         "The final output lands in <docdir>/<docname>/."
-      ),
-   )
-   args = parser.parse_args()
+def main():
+    """Entry point for command-line usage of pg_rst.py."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=(
+            "Convert a .usg help document to reStructuredText (.rst) using RST templates. "
+            "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
+            "the module is searched first for module-level OPTS/ALIAS variables, "
+            "then for a class defined in that module that carries both as class "
+            "attributes."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        'docname',
+        help=(
+            "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
+            "The module rda_python_<docname>/<docname>.py must be importable "
+            "and must define OPTS (and optionally ALIAS) either at module "
+            "level or as class attributes."
+        ),
+    )
+    parser.add_argument(
+        '--docdir',
+        default=None,
+        metavar='DIR',
+        help=(
+            "Root directory under which the per-document RST output directory "
+            "is created (default: current working directory).  "
+            "The final output lands in <docdir>/<docname>/."
+        ),
+    )
+    args = parser.parse_args()
 
-   opts, alias, origin = _load_opts_alias(args.docname)
-   pg = PgRST()
-   pg.DOCS['ORIGIN'] = origin
-   if args.docdir is not None:
-      pg.DOCS['DOCDIR'] = args.docdir
-   pg.process_docs(args.docname, opts, alias)
+    opts, alias, origin = _load_opts_alias(args.docname)
+    pg = PgRST()
+    pg.DOCS['ORIGIN'] = origin
+    if args.docdir is not None:
+        pg.DOCS['DOCDIR'] = args.docdir
+    pg.process_docs(args.docname, opts, alias)
+
+if __name__ == "__main__":
+    main()
