@@ -1134,9 +1134,9 @@ class PgRST(PgFile, PgUtil):
 # ---------------------------------------------------------------------------
 
 def _load_opts_alias(docname):
-   """Import ``rda_python_<docname>.<docname>`` and return its ``(OPTS, ALIAS)`` pair.
+   """Import ``rda_python_<docname>.<docname>`` and return its ``(OPTS, ALIAS, origin)`` triple.
 
-   Resolution order:
+   Resolution order for OPTS / ALIAS:
 
    1. Module-level ``OPTS`` / ``ALIAS`` attributes.
    2. The first class *defined in that module* that carries both ``OPTS``
@@ -1144,13 +1144,19 @@ def _load_opts_alias(docname):
 
    ``ALIAS`` is optional; an empty dict is returned when not found.
 
+   The ``origin`` value is the absolute path of the directory that contains
+   ``<docname>.py`` (i.e. ``rda_python_<docname>/``), derived from
+   ``mod.__file__``.  It is intended to be assigned to
+   ``PgRST.DOCS['ORIGIN']`` so that :meth:`PgRST.parse_docs` looks for the
+   ``.usg`` source file in the same location as the document module.
+
    Args:
       docname (str): Short document name used to build the module path
                      ``rda_python_<docname>.<docname>``.
 
    Returns:
-      tuple[dict, dict]: ``(OPTS, ALIAS)`` ready to pass to
-      :meth:`PgRST.process_docs`.
+      tuple[dict, dict, str]: ``(OPTS, ALIAS, origin)`` where *origin* is
+      the absolute directory path of the imported module file.
 
    Raises:
       SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the module
@@ -1164,6 +1170,9 @@ def _load_opts_alias(docname):
          "Cannot import module '{}': {}".format(modname, exc),
          PgLOG.LGWNEX,
       )
+
+   # Derive ORIGIN from the module's own file path.
+   origin = op.dirname(op.abspath(mod.__file__))
 
    # 1. Try module-level attributes first.
    opts  = getattr(mod, 'OPTS',  None)
@@ -1191,7 +1200,7 @@ def _load_opts_alias(docname):
    if alias is None:
       alias = {}
 
-   return opts, alias
+   return opts, alias, origin
 
 
 if __name__ == '__main__':
@@ -1216,6 +1225,7 @@ if __name__ == '__main__':
    )
    args = parser.parse_args()
 
-   opts, alias = _load_opts_alias(args.docname)
+   opts, alias, origin = _load_opts_alias(args.docname)
    pg = PgRST()
+   pg.DOCS['ORIGIN'] = origin
    pg.process_docs(args.docname, opts, alias)
