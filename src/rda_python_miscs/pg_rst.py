@@ -19,6 +19,7 @@ import inspect
 import argparse
 import importlib
 from os import path as op
+from rda_python_common.pg_LOG import PgLOG
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
 
@@ -1157,9 +1158,9 @@ def _load_opts_alias(docname):
    try:
       mod = importlib.import_module(modname)
    except ImportError as exc:
-      self.pglog(
+      PgLOG.pglog(
          "Cannot import module '{}': {}".format(modname, exc),
-         self.LGWNEX,
+         PgLOG.LGWNEX,
       )
 
    # Derive ORIGIN from the module's own file path.
@@ -1181,10 +1182,10 @@ def _load_opts_alias(docname):
                break
 
    if opts is None:
-      self.pglog(
+      PgLOG.pglog(
          "Module '{}' does not define OPTS (checked module level and "
          "all classes defined in the module)".format(modname),
-         self.LGWNEX,
+         PgLOG.LGWNEX,
       )
 
    # ALIAS is optional; default to empty dict.
