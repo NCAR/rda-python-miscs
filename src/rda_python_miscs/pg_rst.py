@@ -111,7 +111,7 @@ class PgRST(PgFile, PgUtil):
       # global info to be used by the whole application
       self.DOCS = {
          'ORIGIN' : os.getcwd(), # directory to the original document
-         'TMPDIR' : "./rst_templates",                              # directory to find the templates
+         'TMPDIR' : op.join(op.dirname(op.abspath(__file__)), "rst_templates"), # directory to find the templates
          'DCROOT' : None, # root directory to rst documents
          'DOCDIR' : "", # directory to final rst documents
          'DOCNAM' : "", # document name: dsarch, dsupdt, etc.
@@ -151,10 +151,6 @@ class PgRST(PgFile, PgUtil):
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
       self.DOCS['DOCDIR'] = "{}/{}".format(self.DOCS['DCROOT'], docname)
-
-      # Resolve TMPDIR to an absolute path before changing the working
-      # directory so that the relative "./rst_templates" path remains valid.
-      self.DOCS['TMPDIR'] = op.abspath(self.DOCS['TMPDIR'])
 
       self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
       PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
