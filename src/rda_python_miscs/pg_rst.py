@@ -16,22 +16,28 @@ import os
 import re
 from os import path as op
 import PgLOG
-import PgUtil
-import PgFile
+from rda_python_common.pg_file import PgFile
+from rda_python_common.pg_util import PgUtil
 
 
-class PgRST:
+class PgRST(PgFile, PgUtil):
    """Convert text-based program usage documents (.usg files) into
    reStructuredText (.rst) files using RST template files.
+
+   Inherits from :class:`rda_python_common.pg_file.PgFile` and
+   :class:`rda_python_common.pg_util.PgUtil`, giving access to the full
+   file-operation and utility MRO chain (``PgFile → PgUtil → PgLOG``).
+   Inherited file helpers (e.g. ``change_local_directory``) are called
+   directly via ``self`` rather than as bare module functions.
 
    Parses a structured ``.usg`` source document into sections, options, and
    examples, then renders each as a standalone ``.rst`` file by substituting
    generated RST content into template files found under ``TMPDIR``.
 
    Class constants:
-      Q0  -- quote character used as a markup sentinel in source documents
-      Q1  -- RST bold open marker  (**)
-      Q2  -- RST bold close marker (**)
+      Q0     -- quote character used as a markup sentinel in source documents
+      Q1     -- RST bold open marker  (**)
+      Q2     -- RST bold close marker (**)
       EMLIST -- set of program names rendered as hyperlinks
       SEARCH -- regex alternation matching option-category keywords
    """
@@ -55,12 +61,15 @@ class PgRST:
    SEARCH = "(Action|Info|Mode|Multi-Value|Single-Value)"
 
    def __init__(self):
-      """Initialise all per-document state and path configuration.
+      """Initialize all per-document state and path configuration.
 
-      Instance attributes set here are reset for every new document so that
-      a single ``PgRST`` instance can be reused across multiple calls to
+      Calls ``super().__init__()`` to initialise the full ``PgFile`` /
+      ``PgUtil`` / ``PgLOG`` MRO chain before setting up the document-level
+      state.  Instance attributes are reset for every new document so that a
+      single ``PgRST`` instance can be reused across multiple calls to
       ``process_docs``.
       """
+      super().__init__()
       self.OPTS = {}
       self.ALIAS = {}
 
@@ -76,7 +85,7 @@ class PgRST:
       # secid    - section ID (1, 1.1, 1.1.1, ...)
       # title    - section title
       # level    - section level, 0 top level
-      # desc     - section decription
+      # desc     - section description
       # opts     - pointer to an array of included option short names
       self.sections = []
 
@@ -85,14 +94,14 @@ class PgRST:
       # name     - option long name
       # type     - option type, 0 - Mode, 1 - Info, 2 - Action
       # alias    - array of alias option names None if none
-      # desc     - option decription
+      # desc     - option description
       # examples - array of example indices included for the option
       self.options = {}
 
       # Example array with each example pointing to a hash:
       # opt      - option short name the example belongs
       # title    - example title
-      # desc     - example decription
+      # desc     - example description
       self.examples = []
 
       # global info to be used by the whole application
@@ -143,7 +152,7 @@ class PgRST:
       # directory so that the relative "./rst_templates" path remains valid.
       self.DOCS['TMPDIR'] = op.abspath(self.DOCS['TMPDIR'])
 
-      PgFile.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
+      self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
       PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
 
       if op.exists("index.rst"):  # write index file once
@@ -736,9 +745,9 @@ class PgRST:
          link = "`{} <{}>`_".format(replace, replace)
          line = line.replace(replace, link)
 
-      # Q0...Q0 is a source-document quoting convention: Q0word Q0 marks
+      # Q0...Q0 is a source-document quoting convention: Q0wordQ0 marks
       # a program name to be rendered as a link or bold text.
-      opts = re.findall(r"Q0(\S+)Q0", line)
+      opts = re.findall(r"{}(\S+){}".format(self.Q0, self.Q0), line)
       for opt in opts:
          if opt not in self.EMLIST: continue  # quote only predefined ones
          replace = self.Q0 + opt + self.Q0
