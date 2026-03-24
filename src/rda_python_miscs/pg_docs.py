@@ -387,7 +387,7 @@ class PgDOCS:
          option = self.options[opt]
          secid = option['secid']
          content += (("<tr><td align=right><small>A.{}.</small></td>\n".format(idx)) +
-                     ("<td ali gn=left><a href=\"section{}.html#e{}\">\n".format(secid, idx)) +
+                     ("<td align=left><a href=\"section{}.html#e{}\">\n".format(secid, idx)) +
                      ("<small>{} Option -{} (-{})</small></a></td></tr>\n".format(option['type'], opt, option['name'])))
          idx += 1
       content += "</table></td></tr>\n"
