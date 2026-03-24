@@ -1219,9 +1219,21 @@ if __name__ == '__main__':
          "level or as class attributes."
       ),
    )
+   parser.add_argument(
+      '--dcroot',
+      default=None,
+      metavar='DIR',
+      help=(
+         "Root directory under which the per-document RST output directory "
+         "is created (default: current working directory).  "
+         "The final output lands in <dcroot>/<docname>/."
+      ),
+   )
    args = parser.parse_args()
 
    opts, alias, origin = _load_opts_alias(args.docname)
    pg = PgRST()
    pg.DOCS['ORIGIN'] = origin
+   if args.dcroot is not None:
+      pg.DOCS['DCROOT'] = args.dcroot
    pg.process_docs(args.docname, opts, alias)
