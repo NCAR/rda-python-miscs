@@ -19,7 +19,6 @@ import inspect
 import argparse
 import importlib
 from os import path as op
-import PgLOG
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
 
@@ -778,7 +777,7 @@ class PgRST(PgFile, PgUtil):
          str: RST-formatted description content.
       """
       if desc == "\n": return ''
-      ptype = 0   # paragraph type: 0 - normal, 1 - table, 2 - synopsis
+      ptype = 0   # paragraph type: 0 - normal, 1 - table, 2 = synopsis
       content = ''
       cnt = 0
       alllines = re.split(r'\n', desc)
@@ -1195,41 +1194,46 @@ def _load_opts_alias(docname):
    return opts, alias, origin
 
 
-if __name__ == '__main__':
-   parser = argparse.ArgumentParser(
-      description=(
-         "Generate RST documentation from a structured .usg source document.\n\n"
-         "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
-         "the module is searched first for module-level OPTS/ALIAS variables, "
-         "then for a class defined in that module that carries both as class "
-         "attributes."
-      ),
-      formatter_class=argparse.RawDescriptionHelpFormatter,
-   )
-   parser.add_argument(
-      'docname',
-      help=(
-         "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
-         "The module rda_python_<docname>/<docname>.py must be importable "
-         "and must define OPTS (and optionally ALIAS) either at module "
-         "level or as class attributes."
-      ),
-   )
-   parser.add_argument(
-      '--docdir',
-      default=None,
-      metavar='DIR',
-      help=(
-         "Root directory under which the per-document RST output directory "
-         "is created (default: current working directory).  "
-         "The final output lands in <docdir>/<docname>/."
-      ),
-   )
-   args = parser.parse_args()
+def main():
+    """Entry point for command-line usage of pg_rst.py."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=(
+            "Convert a .usg help document to reStructuredText (.rst) using RST templates. "
+            "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
+            "the module is searched first for module-level OPTS/ALIAS variables, "
+            "then for a class defined in that module that carries both as class "
+            "attributes."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        'docname',
+        help=(
+            "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
+            "The module rda_python_<docname>/<docname>.py must be importable "
+            "and must define OPTS (and optionally ALIAS) either at module "
+            "level or as class attributes."
+        ),
+    )
+    parser.add_argument(
+        '--docdir',
+        default=None,
+        metavar='DIR',
+        help=(
+            "Root directory under which the per-document RST output directory "
+            "is created (default: current working directory).  "
+            "The final output lands in <docdir>/<docname>/."
+        ),
+    )
+    args = parser.parse_args()
 
-   opts, alias, origin = _load_opts_alias(args.docname)
-   pg = PgRST()
-   pg.DOCS['ORIGIN'] = origin
-   if args.docdir is not None:
-      pg.DOCS['DOCDIR'] = args.docdir
-   pg.process_docs(args.docname, opts, alias)
+    opts, alias, origin = _load_opts_alias(args.docname)
+    pg = PgRST()
+    pg.DOCS['ORIGIN'] = origin
+    if args.docdir is not None:
+        pg.DOCS['DOCDIR'] = args.docdir
+    pg.process_docs(args.docname, opts, alias)
+
+if __name__ == "__main__":
+    main()
