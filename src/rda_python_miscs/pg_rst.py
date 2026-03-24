@@ -19,7 +19,6 @@ import inspect
 import argparse
 import importlib
 from os import path as op
-from rda_python_common.pg_log import PgLOG
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
 
@@ -142,17 +141,17 @@ class PgRST(PgFile, PgUtil):
       self.ALIAS = alias
 
       self.parse_docs(docname)
-      if not self.sections: self.pglog(docname + ": empty document", self.LGWNEX)
+      if not self.sections: PgLOG.pglog(docname + ": empty document", PgLOG.LGWNEX)
 
       self.DOCS['DOCNAM'] = docname
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
-      self.change_local_directory(self.DOCS['DOCDIR'], self.LGWNEX)
-      self.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), self.LOGWRN)
+      self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
+      PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
 
       if op.exists("index.rst"):  # write index file once
-         self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
+         PgLOG.pglog("index.rst exists already, delete first if needs to be regenerated", PgLOG.LOGWRN)
       else:
          self.write_index(self.sections[0])
 
@@ -176,7 +175,7 @@ class PgRST(PgFile, PgUtil):
          docname (str): Short document name used to locate ``<ORIGIN>/<docname>.usg``.
       """
       docfile = "{}/{}.usg".format(self.DOCS['ORIGIN'], docname)
-      self.pglog("Parsing info for Document '{}'".format(docname), self.LOGWRN)
+      PgLOG.pglog("Parsing info for Document '{}'".format(docname), PgLOG.LOGWRN)
       section = self.init_section('0', "Preface")
       option = example = None
       fh = open(docfile, 'r')
@@ -227,11 +226,11 @@ class PgRST(PgFile, PgUtil):
       # check completion of options
       for opt in self.OPTS:
          if opt not in self.options:
-            self.pglog("Missing option Entry -{} (-{}) in Document '{}'".format(opt, self.OPTS[opt][1], docname), self.LOGWRN)
+            PgLOG.pglog("Missing option Entry -{} (-{}) in Document '{}'".format(opt, self.OPTS[opt][1], docname), PgLOG.LOGWRN)
       if self.sections:
          cnt = len(self.sections)
          s = 's' if cnt > 1 else ''
-         self.pglog("{} Section{} gathered for '{}'".format(cnt, s, docname), self.LOGWRN)
+         PgLOG.pglog("{} Section{} gathered for '{}'".format(cnt, s, docname), PgLOG.LOGWRN)
 
    #
    # cache section information
@@ -369,7 +368,7 @@ class PgRST(PgFile, PgUtil):
       types = ("Mode", "Info", "Info", "Action")
 
       if opt not in self.OPTS:
-         self.pglog("{} -- option not defined for {}".format(opt, self.DOCS['DOCNAM']), self.LGWNEX)
+         PgLOG.pglog("{} -- option not defined for {}".format(opt, self.DOCS['DOCNAM']), PgLOG.LGWNEX)
       option['secid'] = secid
       option['opt'] = opt
       ms = re.match(r'^(, | \(Alias: .*\), )(.*)', desc)
@@ -489,15 +488,15 @@ class PgRST(PgFile, PgUtil):
          matches = re.findall(r'__([A-Z]+)__', line)
          if matches:
             for key in matches:
-               if key not in hash: self.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), self.LGWNEX)
-               if not hash[key]: self.pglog(key + ": empty content", self.LGWNEX)
+               if key not in hash: PgLOG.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), PgLOG.LGWNEX)
+               if not hash[key]: PgLOG.pglog(key + ": empty content", PgLOG.LGWNEX)
                line = line.replace("__{}__".format(key), hash[key])
          rf.write(line + "\n")
          line = tf.readline()
 
       tf.close()
       rf.close()
-      self.pglog("{}{}.rst created from {}.rst.temp".format(template, extra, template), self.LOGWRN)
+      PgLOG.pglog("{}{}.rst created from {}.rst.temp".format(template, extra, template), PgLOG.LOGWRN)
 
    #
    # create rst content for table of contents
@@ -1080,7 +1079,7 @@ class PgRST(PgFile, PgUtil):
          for alias in self.ALIAS[opt]:
              if re.match(r'^{}$'.format(alias), p, re.I): return opt
 
-      self.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), self.LGWNEX)
+      PgLOG.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), PgLOG.LGWNEX)
 
    #
    # replace with rst link for a given section title
@@ -1118,7 +1117,7 @@ class PgRST(PgFile, PgUtil):
       for section in self.sections:
          if section['secid'] == secid: return section
 
-      self.pglog("Unknown Section ID {}".format(secid), self.LGWNEX)
+      PgLOG.pglog("Unknown Section ID {}".format(secid), PgLOG.LGWNEX)
 
 
 # ---------------------------------------------------------------------------
