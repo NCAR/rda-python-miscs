@@ -1134,7 +1134,7 @@ class PgRST(PgFile, PgUtil):
 # ---------------------------------------------------------------------------
 
 def _load_opts_alias(docname):
-   """Import ``rda_python_<docname>`` and return its ``(OPTS, ALIAS)`` pair.
+   """Import ``rda_python_<docname>.<docname>`` and return its ``(OPTS, ALIAS)`` pair.
 
    Resolution order:
 
@@ -1145,8 +1145,8 @@ def _load_opts_alias(docname):
    ``ALIAS`` is optional; an empty dict is returned when not found.
 
    Args:
-      docname (str): Short document name used to build the module name
-                     ``rda_python_<docname>``.
+      docname (str): Short document name used to build the module path
+                     ``rda_python_<docname>.<docname>``.
 
    Returns:
       tuple[dict, dict]: ``(OPTS, ALIAS)`` ready to pass to
@@ -1156,7 +1156,7 @@ def _load_opts_alias(docname):
       SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the module
                   cannot be imported or ``OPTS`` cannot be found.
    """
-   modname = "rda_python_{}".format(docname)
+   modname = "rda_python_{}.{}".format(docname, docname)
    try:
       mod = importlib.import_module(modname)
    except ImportError as exc:
@@ -1198,7 +1198,7 @@ if __name__ == '__main__':
    parser = argparse.ArgumentParser(
       description=(
          "Generate RST documentation from a structured .usg source document.\n\n"
-         "OPTS and ALIAS are loaded from the module rda_python_<docname>.py: "
+         "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
          "the module is searched first for module-level OPTS/ALIAS variables, "
          "then for a class defined in that module that carries both as class "
          "attributes."
@@ -1209,9 +1209,9 @@ if __name__ == '__main__':
       'docname',
       help=(
          "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
-         "The module rda_python_<docname>.py must be importable and must "
-         "define OPTS (and optionally ALIAS) either at module level or as "
-         "class attributes."
+         "The module rda_python_<docname>/<docname>.py must be importable "
+         "and must define OPTS (and optionally ALIAS) either at module "
+         "level or as class attributes."
       ),
    )
    args = parser.parse_args()
