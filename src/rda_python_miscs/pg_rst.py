@@ -3,7 +3,7 @@
 ###############################################################################
 #
 #     Title : pg_rst.py
-#    Author : Zaihua Ji,  zjiucar.edu
+#    Author : Zaihua Ji,  zji@ucar.edu
 #      Date : 09/14/2020
 #   Purpose : python library module to help convert text help documents into
 #             rst format with help of rst templates
