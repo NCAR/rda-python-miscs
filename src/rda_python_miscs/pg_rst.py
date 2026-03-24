@@ -148,8 +148,6 @@ class PgRST(PgFile, PgUtil):
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
-      self.DOCS['DOCDIR'] = "{}/{}".format(self.DOCS['DOCDIR'], docname)
-
       self.change_local_directory(self.DOCS['DOCDIR'], PgLOG.LGWNEX)
       PgLOG.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), PgLOG.LOGWRN)
 
