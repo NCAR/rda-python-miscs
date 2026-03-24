@@ -532,7 +532,8 @@ class PgDOCS:
          link = "<a href=\"{}\" target=_top>{}</a>".format(replace, replace)
          line = line.replace(replace, link)
 
-      opts = re.findall(r"Q0(\S+)Q0", line)
+      pattern = r"{q}(\S+){q}".format(q=re.escape(self.Q0))
+      opts = re.findall(pattern, line)
       for opt in opts:
          if opt not in self.EMLIST: continue  # quote only predefined ones
          replace = self.Q0+opt+self.Q0
