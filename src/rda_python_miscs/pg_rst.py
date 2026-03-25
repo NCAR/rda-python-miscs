@@ -178,48 +178,47 @@ class PgRST(PgFile, PgUtil):
       self.pglog("Parsing info for Document '{}'".format(docname), self.LOGWRN)
       section = self.init_section('0', "Preface")
       option = example = None
-      fh = open(docfile, 'r')
-      line = fh.readline()
-      while line:
-         if re.match(r'\s*#', line):
-            line = fh.readline()
-            continue   # skip comment lines
-         ms = re.match(r'^(.*\S)\s+#', line)
-         if ms:
-            line = ms.group(1)     # remove comments
-         else:
-            line = line.rstrip()   # remove trailing white spaces
-
-         # Temporarily escape <UPPERCASE> tokens so they are not confused
-         # with special markers like <:>, <=>, <!> used in option parsing.
-         while True:
-            ms = re.search(r'(<([A-Z/\-\.]+)>)', line)
-            if ms:
-               line = line.replace(ms.group(1), "&lt{}&gt".format(ms.group(2)))
-            else:
-               break
-         ms = re.match(r'^([\d\.]+)\s+(.+)$', line)
-         if ms:   # start new section
-            section = self.record_section(section, option, example, ms.group(1), ms.group(2))
-            option = example = None
-         else:
-            ms = re.match(r'^  -([A-Z]{2}) or -\w+(.*)$', line)
-            if ms:    # found new option
-               option = self.record_option(section, option, example, ms.group(1), ms.group(2))
-               example = None
-            elif option:
-               ms = re.match(r'^  For( | another )example, (.*)$', line)
-               if ms:    # found example
-                  example = self.record_example(option, example, ms.group(2))
-               elif example:
-                  example['desc'] += line + "\n"
-               else:
-                  option['desc'] += line + "\n"
-            else:
-               section['desc'] += line + "\n"
-
+      with open(docfile, 'r') as fh:
          line = fh.readline()
-      fh.close()
+         while line:
+            if re.match(r'\s*#', line):
+               line = fh.readline()
+               continue   # skip comment lines
+            ms = re.match(r'^(.*\S)\s+#', line)
+            if ms:
+               line = ms.group(1)     # remove comments
+            else:
+               line = line.rstrip()   # remove trailing white spaces
+
+            # Temporarily escape <UPPERCASE> tokens so they are not confused
+            # with special markers like <:>, <=>, <!> used in option parsing.
+            while True:
+               ms = re.search(r'(<([A-Z/\-\.]+)>)', line)
+               if ms:
+                  line = line.replace(ms.group(1), "&lt{}&gt".format(ms.group(2)))
+               else:
+                  break
+            ms = re.match(r'^([\d\.]+)\s+(.+)$', line)
+            if ms:   # start new section
+               section = self.record_section(section, option, example, ms.group(1), ms.group(2))
+               option = example = None
+            else:
+               ms = re.match(r'^  -([A-Z]{2}) or -\w+(.*)$', line)
+               if ms:    # found new option
+                  option = self.record_option(section, option, example, ms.group(1), ms.group(2))
+                  example = None
+               elif option:
+                  ms = re.match(r'^  For( | another )example, (.*)$', line)
+                  if ms:    # found example
+                     example = self.record_example(option, example, ms.group(2))
+                  elif example:
+                     example['desc'] += line + "\n"
+                  else:
+                     option['desc'] += line + "\n"
+               else:
+                  section['desc'] += line + "\n"
+
+            line = fh.readline()
 
       self.record_section(section, option, example)
 
@@ -322,15 +321,14 @@ class PgRST(PgFile, PgUtil):
          dict: New section dict with keys ``secid``, ``title``, ``desc``,
                ``level``, and ``opts``.
       """
+      level = secid.count('.') + 1
       section = {
          'secid' : secid,
          'title' : title,
           'desc' : "",
-         'level' : 0,
+         'level' : level,
           'opts' : []
       }
-      level = len(re.split(r'\.', secid))
-      section['level'] = level
       if level == 1:
          if re.match(r'^ACTION', section['title']):
             self.SECIDS['Action'] = secid
@@ -396,9 +394,7 @@ class PgRST(PgFile, PgUtil):
       Returns:
          dict: New example dict with keys ``opt``, ``title``, and ``desc``.
       """
-      example = {'opt' : opt, 'title' : "", 'desc' : desc.title() + "\n"}
-
-      return example
+      return {'opt' : opt, 'title' : "", 'desc' : desc.title() + "\n"}
 
    #
    # write the entry file: index.rst
@@ -470,32 +466,28 @@ class PgRST(PgFile, PgUtil):
       if extra is None: extra = ""
       rstfile = "{}/{}{}.rst".format(self.DOCS['DOCDIR'], template, extra)
 
-      tf = open(tempfile, 'r')
-      rf = open(rstfile, 'w')
-      idx = 0
-      line = tf.readline()
-      while line:
-         idx += 1
-         if re.match(r'\s*#', line):
-            line = tf.readline()
-            continue   # skip comment lines
-         ms = re.match(r'^(.*\S)\s+#', line)
-         if ms:
-            line = ms.group(1)     # remove comments
-         else:
-            line = line.rstrip()   # remove trailing white spaces
-
-         matches = re.findall(r'__([A-Z]+)__', line)
-         if matches:
-            for key in matches:
-               if key not in hash: self.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), self.LGWNEX)
-               if not hash[key]: self.pglog(key + ": empty content", self.LGWNEX)
-               line = line.replace("__{}__".format(key), hash[key])
-         rf.write(line + "\n")
+      with open(tempfile, 'r') as tf, open(rstfile, 'w') as rf:
+         idx = 0
          line = tf.readline()
+         while line:
+            idx += 1
+            if re.match(r'\s*#', line):
+               line = tf.readline()
+               continue   # skip comment lines
+            ms = re.match(r'^(.*\S)\s+#', line)
+            if ms:
+               line = ms.group(1)     # remove comments
+            else:
+               line = line.rstrip()   # remove trailing white spaces
 
-      tf.close()
-      rf.close()
+            matches = re.findall(r'__([A-Z]+)__', line)
+            if matches:
+               for key in matches:
+                  if key not in hash: self.pglog("{}: not defined at {}({}) {}".format(key, line, idx, tempfile), self.LGWNEX)
+                  if not hash[key]: self.pglog(key + ": empty content", self.LGWNEX)
+                  line = line.replace("__{}__".format(key), hash[key])
+            rf.write(line + "\n")
+            line = tf.readline()
       self.pglog("{}{}.rst created from {}.rst.temp".format(template, extra, template), self.LOGWRN)
 
    #
@@ -684,12 +676,10 @@ class PgRST(PgFile, PgUtil):
       elif ptype == 2:
          opts = re.findall(r'(-\(*)([a-zA-Z]{2,})(\W|$)', line)
          ms = re.match(r'^\s*%s(\s+[\w\.]+\s+|\s+)([a-zA-Z]{2})(\s)' % self.DOCS['DOCNAM'], line)
-         # list.insert() returns None; prepend the match groups explicitly.
          if ms: opts = [ms.groups()] + opts
       else:
          opts = re.findall(r'(^-\(*|\W-\(*)([a-zA-Z]{2,})(\W|$)', line)
 
-      if opts is None: opts = []
       for optary in opts:
          opt = self.get_short_option(optary[1])
          pre = optary[0]
@@ -780,7 +770,7 @@ class PgRST(PgFile, PgUtil):
       ptype = 0   # paragraph type: 0 - normal, 1 - table, 2 = synopsis
       content = ''
       cnt = 0
-      alllines = re.split(r'\n', desc)
+      alllines = desc.split('\n')
       lines = []
       for line in alllines:
          if re.match(r'^\s*\S', line):
@@ -1077,7 +1067,7 @@ class PgRST(PgFile, PgUtil):
 
       for opt in self.ALIAS:
          for alias in self.ALIAS[opt]:
-             if re.match(r'^{}$'.format(alias), p, re.I): return opt
+            if re.match(r'^{}$'.format(alias), p, re.I): return opt
 
       self.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), self.LGWNEX)
 
@@ -1195,7 +1185,6 @@ class PgRST(PgFile, PgUtil):
 
 def main():
     """Entry point for command-line usage of pg_rst.py."""
-    import argparse
     parser = argparse.ArgumentParser(
         description=(
             "Convert a .usg help document to reStructuredText (.rst) using RST templates. "
