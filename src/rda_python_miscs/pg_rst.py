@@ -1120,80 +1120,79 @@ class PgRST(PgFile, PgUtil):
 
       PgLOG.pglog("Unknown Section ID {}".format(secid), PgLOG.LGWNEX)
 
+   def load_opts_alias(self, docname):
+      """Import ``rda_python_<docname>.<docname>`` and return its ``(OPTS, ALIAS, origin)`` triple.
+
+      Resolution order for OPTS / ALIAS:
+
+      1. Module-level ``OPTS`` / ``ALIAS`` attributes.
+      2. The first class *defined in that module* that carries both ``OPTS``
+         and ``ALIAS`` as class-level attributes.
+
+      ``ALIAS`` is optional; an empty dict is returned when not found.
+
+      The ``origin`` value is the absolute path of the directory that contains
+      ``<docname>.py`` (i.e. ``rda_python_<docname>/``), derived from
+      ``mod.__file__``.  It is intended to be assigned to
+      ``PgRST.DOCS['ORIGIN']`` so that :meth:`PgRST.parse_docs` looks for the
+      ``.usg`` source file in the same location as the document module.
+
+      Args:
+         docname (str): Short document name used to build the module path
+                        ``rda_python_<docname>.<docname>``.
+
+      Returns:
+         tuple[dict, dict, str]: ``(OPTS, ALIAS, origin)`` where *origin* is
+         the absolute directory path of the imported module file.
+
+      Raises:
+         SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the module
+                     cannot be imported or ``OPTS`` cannot be found.
+      """
+      modname = "rda_python_{}.{}".format(docname, docname)
+      try:
+         mod = importlib.import_module(modname)
+      except ImportError as exc:
+         PgLOG.pglog(
+            "Cannot import module '{}': {}".format(modname, exc),
+            PgLOG.LGWNEX,
+         )
+
+      # Derive ORIGIN from the module's own file path.
+      origin = op.dirname(op.abspath(mod.__file__))
+
+      # 1. Try module-level attributes first.
+      opts  = getattr(mod, 'OPTS',  None)
+      alias = getattr(mod, 'ALIAS', None)
+
+      # 2. Fall back to the first class in the module that owns both.
+      if opts is None or alias is None:
+         for _, obj in inspect.getmembers(mod, inspect.isclass):
+            if obj.__module__ == modname:
+               cls_opts  = getattr(obj, 'OPTS',  None)
+               cls_alias = getattr(obj, 'ALIAS', None)
+               if cls_opts is not None:
+                  if opts  is None: opts  = cls_opts
+                  if alias is None: alias = cls_alias
+                  break
+
+      if opts is None:
+         PgLOG.pglog(
+            "Module '{}' does not define OPTS (checked module level and "
+            "all classes defined in the module)".format(modname),
+            PgLOG.LGWNEX,
+         )
+
+      # ALIAS is optional; default to empty dict.
+      if alias is None:
+         alias = {}
+
+      return opts, alias, origin
+
 
 # ---------------------------------------------------------------------------
 # Command-line entry point
 # ---------------------------------------------------------------------------
-
-def _load_opts_alias(docname):
-   """Import ``rda_python_<docname>.<docname>`` and return its ``(OPTS, ALIAS, origin)`` triple.
-
-   Resolution order for OPTS / ALIAS:
-
-   1. Module-level ``OPTS`` / ``ALIAS`` attributes.
-   2. The first class *defined in that module* that carries both ``OPTS``
-      and ``ALIAS`` as class-level attributes.
-
-   ``ALIAS`` is optional; an empty dict is returned when not found.
-
-   The ``origin`` value is the absolute path of the directory that contains
-   ``<docname>.py`` (i.e. ``rda_python_<docname>/``), derived from
-   ``mod.__file__``.  It is intended to be assigned to
-   ``PgRST.DOCS['ORIGIN']`` so that :meth:`PgRST.parse_docs` looks for the
-   ``.usg`` source file in the same location as the document module.
-
-   Args:
-      docname (str): Short document name used to build the module path
-                     ``rda_python_<docname>.<docname>``.
-
-   Returns:
-      tuple[dict, dict, str]: ``(OPTS, ALIAS, origin)`` where *origin* is
-      the absolute directory path of the imported module file.
-
-   Raises:
-      SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the module
-                  cannot be imported or ``OPTS`` cannot be found.
-   """
-   modname = "rda_python_{}.{}".format(docname, docname)
-   try:
-      mod = importlib.import_module(modname)
-   except ImportError as exc:
-      PgLOG.pglog(
-         "Cannot import module '{}': {}".format(modname, exc),
-         PgLOG.LGWNEX,
-      )
-
-   # Derive ORIGIN from the module's own file path.
-   origin = op.dirname(op.abspath(mod.__file__))
-
-   # 1. Try module-level attributes first.
-   opts  = getattr(mod, 'OPTS',  None)
-   alias = getattr(mod, 'ALIAS', None)
-
-   # 2. Fall back to the first class in the module that owns both.
-   if opts is None or alias is None:
-      for _, obj in inspect.getmembers(mod, inspect.isclass):
-         if obj.__module__ == modname:
-            cls_opts  = getattr(obj, 'OPTS',  None)
-            cls_alias = getattr(obj, 'ALIAS', None)
-            if cls_opts is not None:
-               if opts  is None: opts  = cls_opts
-               if alias is None: alias = cls_alias
-               break
-
-   if opts is None:
-      PgLOG.pglog(
-         "Module '{}' does not define OPTS (checked module level and "
-         "all classes defined in the module)".format(modname),
-         PgLOG.LGWNEX,
-      )
-
-   # ALIAS is optional; default to empty dict.
-   if alias is None:
-      alias = {}
-
-   return opts, alias, origin
-
 
 def main():
     """Entry point for command-line usage of pg_rst.py."""
@@ -1229,8 +1228,8 @@ def main():
     )
     args = parser.parse_args()
 
-    opts, alias, origin = _load_opts_alias(args.docname)
     pg = PgRST()
+    opts, alias, origin = pg.load_opts_alias(args.docname)
     pg.DOCS['ORIGIN'] = origin
     if args.docdir is not None:
         pg.DOCS['DOCDIR'] = args.docdir
