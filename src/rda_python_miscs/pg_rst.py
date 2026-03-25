@@ -1119,9 +1119,10 @@ class PgRST(PgFile, PgUtil):
 
       Resolution order for OPTS / ALIAS:
 
-      1. Module-level ``OPTS`` / ``ALIAS`` attributes.
-      2. The first class *defined in that module* that carries both ``OPTS``
-         and ``ALIAS`` as class-level attributes.
+      1. The first class *defined in that module* that carries ``OPTS``
+         as a class-level attribute.
+      2. Module-level ``OPTS`` / ``ALIAS`` attributes (fallback when no
+         qualifying class is found).
 
       ``ALIAS`` is optional; an empty dict is returned when not found.
 
@@ -1155,25 +1156,26 @@ class PgRST(PgFile, PgUtil):
       # Derive ORIGIN from the module's own file path.
       origin = op.dirname(op.abspath(mod.__file__))
 
-      # 1. Try module-level attributes first.
-      opts  = getattr(mod, 'OPTS',  None)
-      alias = getattr(mod, 'ALIAS', None)
+      # 1. Find the first class defined in this module and read OPTS / ALIAS from it.
+      cls = next(
+         (obj for _, obj in inspect.getmembers(mod, inspect.isclass)
+          if obj.__module__ == modname),
+         None,
+      )
 
-      # 2. Fall back to the first class in the module that owns both.
-      if opts is None or alias is None:
-         for _, obj in inspect.getmembers(mod, inspect.isclass):
-            if obj.__module__ == modname:
-               cls_opts  = getattr(obj, 'OPTS',  None)
-               cls_alias = getattr(obj, 'ALIAS', None)
-               if cls_opts is not None:
-                  if opts  is None: opts  = cls_opts
-                  if alias is None: alias = cls_alias
-                  break
+      if cls is not None:
+         obj   = cls()
+         opts  = getattr(obj, 'OPTS',  None)
+         alias = getattr(obj, 'ALIAS', None)
+      else:
+         # 2. Fall back to module-level attributes when no class is found.
+         opts  = getattr(mod, 'OPTS',  None)
+         alias = getattr(mod, 'ALIAS', None)
 
       if opts is None:
          self.pglog(
-            "Module '{}' does not define OPTS (checked module level and "
-            "all classes defined in the module)".format(modname),
+            "Module '{}' does not define OPTS (checked class and "
+            "module level)".format(modname),
             self.LGWNEX,
          )
 
