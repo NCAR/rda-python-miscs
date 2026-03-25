@@ -1,1 +1,2 @@
 include src/rda_python_miscs/*.usg
+include src/rda_python_miscs/rst_templates/*.temp
