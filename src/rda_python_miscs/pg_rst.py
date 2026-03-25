@@ -168,8 +168,10 @@ class PgRST(PgFile, PgUtil):
 
       Lines beginning with ``#`` are treated as comments and skipped.  Inline
       trailing comments are also stripped.  Angle-bracketed uppercase tokens
-      (e.g. ``<FILENAME>``) are temporarily escaped to ``&lt;FILENAME&gt;``
-      so they are not misidentified as option markers later in processing.
+      (e.g. ``<FILENAME>``) are temporarily escaped to ``&ltFILENAME&gt``
+      so they are not misidentified as option markers (``<:>``, ``<=>``,
+      ``<!>``) later in processing.  They are unescaped back to ``<FILENAME>``
+      in :meth:`replace_option_link` before appearing in RST output.
 
       Args:
          docname (str): Short document name used to locate ``<ORIGIN>/<docname>.usg``.
@@ -701,7 +703,6 @@ class PgRST(PgFile, PgUtil):
             after = ')'
 
          replace = pre + opt + after
-         if re.search(r'<!>', after): after = after.replace(r'<!>', '<&#33;>')
          link = "{}`{} <{}>`_{}".format(pre, opt, link, after)
          line = line.replace(replace, link)
 
@@ -741,6 +742,10 @@ class PgRST(PgFile, PgUtil):
          else:
             link = self.Q1 + opt + self.Q2
          line = line.replace(replace, link)
+
+      # Unescape <UPPERCASE> tokens that were temporarily escaped during
+      # parsing to avoid confusion with option markers (<:>, <=>, <!>).
+      line = line.replace('&lt', '<').replace('&gt', '>')
 
       return line
 
