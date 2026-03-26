@@ -651,9 +651,9 @@ class PgRST(PgFile, PgUtil):
       """Scan *line* for option references, section-category keywords, URLs, and
       quoted program names, and replace each with an RST hyperlink.
 
-      Same-file links use RST named anchor references (`` `name`_ `` or
+      All links use RST named anchor references (`` `name`_ `` or
       `` `text <name_>`_ ``) targeting anchors of the form ``.. _name:``.
-      Cross-file links use anonymous hyperlinks: `` `text <url>`_ ``.
+      Cross-file option links target ``.. _section{secid}:`` anchors.
 
       Args:
          line   (str): Source text line to process.
@@ -688,16 +688,15 @@ class PgRST(PgFile, PgUtil):
          pre = optary[0]
          after = optary[2]
          secid = self.options[opt]['secid']
-         anchor = None   # RST anchor name for same-file links (.. _NAME:)
-         url = None      # URL for cross-file links
+         anchor = None   # RST anchor name for same-file or cross-file links (.. _NAME:)
          if secid == csecid:
             anchor = opt
          elif self.options[opt]['type'] == "Action":
-            url = "section{}.rst".format(secid)
+            anchor = "section{}".format(secid)
          elif ptype == 2 and opt == "FN":
             anchor = "field"
          else:
-            url = "section{}.rst#{}".format(secid, opt)
+            anchor = "section{}".format(secid)
 
          ms = re.search(r'-\(({}\|\w+)\)'.format(opt), line)
          if ms:
@@ -706,13 +705,10 @@ class PgRST(PgFile, PgUtil):
             after = ')'
 
          replace = pre + opt + after
-         if anchor is not None:
-            if opt == anchor:
-               link = "{}`{}`_{}".format(pre, opt, after)
-            else:
-               link = "{}`{} <{}_>`_{}".format(pre, opt, anchor, after)
+         if opt == anchor:
+            link = "{}`{}`_{}".format(pre, opt, after)
          else:
-            link = "{}`{} <{}>`_{}".format(pre, opt, url, after)
+            link = "{}`{} <{}_>`_{}".format(pre, opt, anchor, after)
          line = line.replace(replace, link)
 
       opts = re.findall(r'(^|\W){}( Options*\W|\W|$)'.format(self.SEARCH), line)
@@ -731,7 +727,7 @@ class PgRST(PgFile, PgUtil):
          if ptype == 2 and re.search(r'Mode Options*', opt) and dtype == 3:
             link = "{}`{} <mode_>`_{}".format(pre, opt, after)
          else:
-            link = "{}`{} <section{}.rst>`_{}".format(pre, opt, secid, after)
+            link = "{}`{} <section{}_>`_{}".format(pre, opt, secid, after)
          line = line.replace(replace, link)
 
       ms = re.search(r'(https*://\S+)(\.|\,)', line)
