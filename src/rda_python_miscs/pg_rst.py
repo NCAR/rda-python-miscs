@@ -129,7 +129,7 @@ class PgRST(PgFile, PgUtil):
 
       This is the main entry point.  It populates ``self.sections``,
       ``self.options``, and ``self.examples`` by calling ``parse_docs``, then
-      writes ``index.rst``, ``toc.rst``, and one ``section<id>.rst`` per
+      writes ``index.rst`` and one ``section<id>.rst`` per
       section into ``DOCDIR``.
 
       Args:
@@ -154,8 +154,6 @@ class PgRST(PgFile, PgUtil):
          self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
       else:
          self.write_index(self.sections[0])
-
-      self.write_toc()
 
       for section in self.sections:
          self.write_section(section)
@@ -404,28 +402,16 @@ class PgRST(PgFile, PgUtil):
    def write_index(self, section):
       """Write ``index.rst`` from the ``index.rst.temp`` template.
 
-      Passes ``TITLE`` (document title) and ``SECID`` (first section id)
-      as substitution variables.
+      Passes ``TITLE`` (document title), ``SECID`` (first section id),
+      and the generated ``TOC`` RST content as substitution variables.
 
       Args:
          section (dict): The first section dict, used to supply ``SECID``.
       """
-      hash = {'TITLE' : self.DOCS['DOCTIT'], 'SECID' : section['secid']}
+      hash = {'TITLE' : self.DOCS['DOCTIT'], 'SECID' : section['secid'],
+              'TOC'   : self.create_toc()}
 
       self.template_to_rst("index", hash)
-
-   #
-   # write the table of contents: toc.rst
-   #
-   def write_toc(self):
-      """Write ``toc.rst`` from the ``toc.rst.temp`` template.
-
-      Passes ``TITLE`` and the generated ``TOC`` RST content as substitution
-      variables.
-      """
-      hash = {'TITLE' : self.DOCS['DOCTIT'], 'TOC' : self.create_toc()}
-
-      self.template_to_rst("toc", hash)
 
    #
    # write a section rst file
@@ -651,8 +637,9 @@ class PgRST(PgFile, PgUtil):
       """Scan *line* for option references, section-category keywords, URLs, and
       quoted program names, and replace each with an RST hyperlink.
 
-      Link targets are formatted as RST anonymous hyperlinks:
-      `` `text <url>`_ ``.
+      All links use RST named anchor references (`` `name`_ `` or
+      `` `text <name_>`_ ``) targeting anchors of the form ``.. _name:``.
+      Cross-file option links target ``.. _section{secid}:`` anchors.
 
       Args:
          line   (str): Source text line to process.
@@ -687,14 +674,15 @@ class PgRST(PgFile, PgUtil):
          pre = optary[0]
          after = optary[2]
          secid = self.options[opt]['secid']
+         anchor = None   # RST anchor name for same-file or cross-file links (.. _NAME:)
          if secid == csecid:
-            link = "#{}".format(opt)
+            anchor = opt
          elif self.options[opt]['type'] == "Action":
-            link = "section{}.rst".format(secid)
+            anchor = "section{}".format(secid)
          elif ptype == 2 and opt == "FN":
-            link = "#field"
+            anchor = "field"
          else:
-            link = "section{}.rst#{}".format(secid, opt)
+            anchor = "section{}".format(secid)
 
          ms = re.search(r'-\(({}\|\w+)\)'.format(opt), line)
          if ms:
@@ -703,7 +691,10 @@ class PgRST(PgFile, PgUtil):
             after = ')'
 
          replace = pre + opt + after
-         link = "{}`{} <{}>`_{}".format(pre, opt, link, after)
+         if opt == anchor:
+            link = "{}`{}`_{}".format(pre, opt, after)
+         else:
+            link = "{}`{} <{}_>`_{}".format(pre, opt, anchor, after)
          line = line.replace(replace, link)
 
       opts = re.findall(r'(^|\W){}( Options*\W|\W|$)'.format(self.SEARCH), line)
@@ -720,9 +711,9 @@ class PgRST(PgFile, PgUtil):
             opt += ms.group(1)
             after = after.replace(ms.group(1), '')
          if ptype == 2 and re.search(r'Mode Options*', opt) and dtype == 3:
-            link = "{}`{} <#mode>`_{}".format(pre, opt, after)
+            link = "{}`{} <mode_>`_{}".format(pre, opt, after)
          else:
-            link = "{}`{} <section{}.rst>`_{}".format(pre, opt, secid, after)
+            link = "{}`{} <section{}_>`_{}".format(pre, opt, secid, after)
          line = line.replace(replace, link)
 
       ms = re.search(r'(https*://\S+)(\.|\,)', line)
