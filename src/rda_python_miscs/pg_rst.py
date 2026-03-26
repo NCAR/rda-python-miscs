@@ -21,7 +21,6 @@ import importlib
 from os import path as op
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
-from posix import WIFCONTINUED
 
 class PgRST(PgFile, PgUtil):
    """Convert text-based program usage documents (.usg files) into
@@ -148,7 +147,7 @@ class PgRST(PgFile, PgUtil):
       self.change_local_directory(self.DOCS['DOCDIR'], self.LGWNEX)
       self.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), self.LOGWRN)
 
-      if op.exists("index.rst"):  # write index file once
+      if op.exists(op.join(self.DOCS['DOCDIR'], "index.rst")):  # write index file once
          self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
       else:
          self.write_index(self.sections[0])
@@ -284,10 +283,16 @@ class PgRST(PgFile, PgUtil):
          dict | None: A new example dict when *ndesc* is given, else ``None``.
       """
       if example:
-         ms = re.match(r'^(.*)\.\s*(.*)$', example['desc'])
+         lines = example['desc'].split('\n')
+         first_line = lines[0]
+         rest = '\n'.join(lines[1:]) if len(lines) > 1 else ''
+         ms = re.match(r'^(.*)\.\s*(.*)$', first_line)
          if ms:
             example['title'] = ms.group(1)
-            example['desc'] = ms.group(2)
+            example['desc'] = (ms.group(2) + '\n' + rest) if rest else ms.group(2)
+         else:
+            example['title'] = first_line
+            example['desc'] = rest
          option['exmidxs'].append(len(self.examples))   # record example index in option
          self.examples.append(example)     # record example globally
 
@@ -380,7 +385,8 @@ class PgRST(PgFile, PgUtil):
       Returns:
          dict: New example dict with keys ``opt``, ``title``, and ``desc``.
       """
-      return {'opt' : opt, 'title' : "", 'desc' : desc.title() + "\n"}
+      desc = (desc[0].upper() + desc[1:]) if desc else desc
+      return {'opt' : opt, 'title' : "", 'desc' : desc + "\n"}
 
    #
    # write the entry file: index.rst
@@ -478,8 +484,8 @@ class PgRST(PgFile, PgUtil):
       """
       
       content = ""
-      clevel = section['level'] if csection else 0
-      csecid = section['secid'] if csection else ""
+      clevel = csection['level'] if csection else 0
+      csecid = csection['secid'] if csection else ""
       depth = self.TLEVEL - clevel
 
       # nested bullet list for all sections
@@ -496,18 +502,18 @@ class PgRST(PgFile, PgUtil):
 
       content = f".. toctree::\n   :maxdepth: {depth}\n   :caption: Table of Contents\n{content}\n"
       # appendix A: list of examples for the parent section and its subsections
-      example = ""
+      appendix = ""
       idx = 1  # used as example index
-      for example in self.examples:
-         opt = example['opt']
+      for exm in self.examples:
+         opt = exm['opt']
          option = self.options[opt]
          secid = option['secid']
-         if not psecid or secid.startswith(psecid + "."):
-            example += "- `A.{}. {} Option -{} (-{}) <{}_e{}>`_\n".format(
+         if not csecid or secid == csecid or secid.startswith(csecid + "."):
+            appendix += "- `A.{}. {} Option -{} (-{}) <{}_e{}>`_\n".format(
                         idx, option['type'], opt, option['name'], secid, idx)
          idx += 1
-      if example:
-         content += "**Appendix A: List of Examples**\n\n" + example + "\n"
+      if appendix:
+         content += "**Appendix A: List of Examples**\n\n" + appendix + "\n"
 
       return content
 
@@ -532,7 +538,7 @@ class PgRST(PgFile, PgUtil):
       for opt in section['opts']:
          content += self.create_option(opt, secid)
 
-      content += create_toc(section)  # add a local TOC for the section and its subsections
+      content += self.create_toc(section)  # add a local TOC for the section and its subsections
       return content
 
    #
@@ -891,7 +897,7 @@ class PgRST(PgFile, PgUtil):
             line = lines[i]
             ms = re.match(r'^\s+-\s+(.*)', line)
             if ms:
-               content += "*. " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
+               content += "* " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
             else:
                content += "   " + self.replace_option_link(line, secid, 1) + "\n"
          content += "\n"
