@@ -129,7 +129,7 @@ class PgRST(PgFile, PgUtil):
 
       This is the main entry point.  It populates ``self.sections``,
       ``self.options``, and ``self.examples`` by calling ``parse_docs``, then
-      writes ``index.rst``, ``toc.rst``, and one ``section<id>.rst`` per
+      writes ``index.rst`` and one ``section<id>.rst`` per
       section into ``DOCDIR``.
 
       Args:
@@ -154,8 +154,6 @@ class PgRST(PgFile, PgUtil):
          self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
       else:
          self.write_index(self.sections[0])
-
-      self.write_toc()
 
       for section in self.sections:
          self.write_section(section)
@@ -404,28 +402,16 @@ class PgRST(PgFile, PgUtil):
    def write_index(self, section):
       """Write ``index.rst`` from the ``index.rst.temp`` template.
 
-      Passes ``TITLE`` (document title) and ``SECID`` (first section id)
-      as substitution variables.
+      Passes ``TITLE`` (document title), ``SECID`` (first section id),
+      and the generated ``TOC`` RST content as substitution variables.
 
       Args:
          section (dict): The first section dict, used to supply ``SECID``.
       """
-      hash = {'TITLE' : self.DOCS['DOCTIT'], 'SECID' : section['secid']}
+      hash = {'TITLE' : self.DOCS['DOCTIT'], 'SECID' : section['secid'],
+              'TOC'   : self.create_toc()}
 
       self.template_to_rst("index", hash)
-
-   #
-   # write the table of contents: toc.rst
-   #
-   def write_toc(self):
-      """Write ``toc.rst`` from the ``toc.rst.temp`` template.
-
-      Passes ``TITLE`` and the generated ``TOC`` RST content as substitution
-      variables.
-      """
-      hash = {'TITLE' : self.DOCS['DOCTIT'], 'TOC' : self.create_toc()}
-
-      self.template_to_rst("toc", hash)
 
    #
    # write a section rst file
