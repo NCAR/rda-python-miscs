@@ -1,11 +1,10 @@
 ################################################################################
 #
-#     Title : index.temp
+#     Title : index_rst.temp
 #    Author : Zaihua Ji,  zji@ucar.edu
 #      Date : 03/17/2026
 #   Purpose : template file for help document index.rst (reStructuredText)
-#
-# Work File : $DSSHOME/lib/templates/index.temp
+#    Github : https://github.com/NCAR/rda-python-mics.git
 #
 ################################################################################
 
@@ -14,11 +13,5 @@
 ============================
 A GUIDE TO __TITLE__
 ============================
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents
-
-   section__SECID__
 
 __TOC__

@@ -21,7 +21,7 @@ import importlib
 from os import path as op
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
-
+from posix import WIFCONTINUED
 
 class PgRST(PgFile, PgUtil):
    """Convert text-based program usage documents (.usg files) into
@@ -48,7 +48,7 @@ class PgRST(PgFile, PgUtil):
    Q0 = "'"
    Q1 = "**"       # RST bold open  (was "<i><b>")
    Q2 = "**"       # RST bold close (was "</i></b>")
-
+   TLEVEL = 3       # max section level to be rendered (1, 2, or 3)
    EMLIST = {
       'dsarch' : 1,
       'msarch' : 1,
@@ -60,7 +60,6 @@ class PgRST(PgFile, PgUtil):
       'rcm' : 1,
       'dcm' : 1,
    }
-
    SEARCH = "(Action|Info|Mode|Multi-Value|Single-Value)"
 
    def __init__(self):
@@ -116,7 +115,6 @@ class PgRST(PgFile, PgUtil):
          'DOCTIT' : "", # document name in upper case letters
          'DOCLNK' : None,
       }
-
       self.LINKS = ['dsarch', 'dsupdt', 'dsrqst', 'dscheck']
 
    #
@@ -164,12 +162,8 @@ class PgRST(PgFile, PgUtil):
    def parse_docs(self, docname):
       """Read *docname*.usg and populate ``sections``, ``options``, and ``examples``.
 
-      Lines beginning with ``#`` are treated as comments and skipped.  Inline
-      trailing comments are also stripped.  Angle-bracketed uppercase tokens
-      (e.g. ``<FILENAME>``) are temporarily escaped to ``&ltFILENAME&gt``
-      so they are not misidentified as option markers (``<:>``, ``<=>``,
-      ``<!>``) later in processing.  They are unescaped back to ``<FILENAME>``
-      in :meth:`replace_option_link` before appearing in RST output.
+      Lines beginning with ``#`` are treated as comments and skipped.  In-line
+      trailing comments are also stripped.
 
       Args:
          docname (str): Short document name used to locate ``<ORIGIN>/<docname>.usg``.
@@ -190,14 +184,6 @@ class PgRST(PgFile, PgUtil):
             else:
                line = line.rstrip()   # remove trailing white spaces
 
-            # Temporarily escape <UPPERCASE> tokens so they are not confused
-            # with special markers like <:>, <=>, <!> used in option parsing.
-            while True:
-               ms = re.search(r'(<([A-Z/\-\.]+)>)', line)
-               if ms:
-                  line = line.replace(ms.group(1), "&lt{}&gt".format(ms.group(2)))
-               else:
-                  break
             ms = re.match(r'^([\d\.]+)\s+(.+)$', line)
             if ms:   # start new section
                section = self.record_section(section, option, example, ms.group(1), ms.group(2))
@@ -481,8 +467,8 @@ class PgRST(PgFile, PgUtil):
    #
    # create rst content for table of contents
    #
-   def create_toc(self):
-      """Build and return the RST table-of-contents string.
+   def create_toc(self, csection=None):
+      """Build and return the RST table-of-contents string of a given section.
 
       Produces a nested bullet list of section links (indented by section
       level) followed by a flat Appendix A list of all example links.
@@ -490,29 +476,38 @@ class PgRST(PgFile, PgUtil):
       Returns:
          str: RST-formatted TOC content ready for ``__TOC__`` substitution.
       """
+      
       content = ""
+      clevel = section['level'] if csection else 0
+      csecid = section['secid'] if csection else ""
+      depth = self.TLEVEL - clevel
 
       # nested bullet list for all sections
       for section in self.sections:
          secid = section['secid']
-         indent = "   " * (section['level'] - 1)
-         content += "{}- `{}. {} <section{}.rst>`_\n".format(
-            indent, secid, section['title'], secid)
+         level = section['level']
+         if csecid:
+            if not secid.startswith(csecid + "."): continue
+         elif level > (clevel+1):
+            continue
+         content += "   section{}\n".format(secid)
 
-      content += "\n"
+      if not content: return ""
 
-      # appendix A: list of examples
-      content += "**Appendix A: List of Examples**\n\n"
-
+      content = f".. toctree::\n   :maxdepth: {depth}\n   :caption: Table of Contents\n{content}\n"
+      # appendix A: list of examples for the parent section and its subsections
+      example = ""
       idx = 1  # used as example index
       for example in self.examples:
          opt = example['opt']
          option = self.options[opt]
          secid = option['secid']
-         content += "- `A.{}. {} Option -{} (-{}) <section{}.rst#e{}>`_\n".format(
-            idx, option['type'], opt, option['name'], secid, idx)
+         if not psecid or secid.startswith(psecid + "."):
+            example += "- `A.{}. {} Option -{} (-{}) <{}_e{}>`_\n".format(
+                        idx, option['type'], opt, option['name'], secid, idx)
          idx += 1
-      content += "\n"
+      if example:
+         content += "**Appendix A: List of Examples**\n\n" + example + "\n"
 
       return content
 
@@ -537,6 +532,7 @@ class PgRST(PgFile, PgUtil):
       for opt in section['opts']:
          content += self.create_option(opt, secid)
 
+      content += create_toc(section)  # add a local TOC for the section and its subsections
       return content
 
    #
@@ -612,7 +608,7 @@ class PgRST(PgFile, PgUtil):
    def create_example(self, exmidx, secid):
       """Build the RST content for a single example.
 
-      Emits a ``.. _e<N>:`` anchor, a bold ``EXAMPLE N. <title>`` heading,
+      Emits a ``.. _secid_e<N>:`` anchor, a bold ``EXAMPLE N. <title>`` heading,
       and the example's body description.
 
       Args:
@@ -624,7 +620,7 @@ class PgRST(PgFile, PgUtil):
       """
       example = self.examples[exmidx]
       exm = exmidx + 1
-      content = "\n.. _e{}:\n\n".format(exm)
+      content = "\n.. _{}_e{}:\n\n".format(secid, exm)
       content += "**EXAMPLE {}. {}**\n\n".format(exm, example['title'])
       content += self.create_description(example['desc'], secid, 2)
 
@@ -713,7 +709,7 @@ class PgRST(PgFile, PgUtil):
          if ptype == 2 and re.search(r'Mode Options*', opt) and dtype == 3:
             link = "{}`{} <mode_>`_{}".format(pre, opt, after)
          else:
-            link = "{}`{} <section{}_>`_{}".format(pre, opt, secid, after)
+            link = "{}`{} <section{}>`_{}".format(pre, opt, secid, after)
          line = line.replace(replace, link)
 
       ms = re.search(r'(https*://\S+)(\.|\,)', line)
@@ -733,10 +729,6 @@ class PgRST(PgFile, PgUtil):
          else:
             link = self.Q1 + opt + self.Q2
          line = line.replace(replace, link)
-
-      # Unescape <UPPERCASE> tokens that were temporarily escaped during
-      # parsing to avoid confusion with option markers (<:>, <=>, <!>).
-      line = line.replace('&lt', '<').replace('&gt', '>')
 
       return line
 
@@ -879,7 +871,6 @@ class PgRST(PgFile, PgUtil):
 
       Detects three sub-formats:
 
-      * Lines starting with ``- `` → RST numbered list (``#.``).
       * Lines ending with ``=>`` → RST line block (``|``).
       * Lines split on `` - `` (key-value pairs) → ``.. list-table::`` directive.
       * All other lines split on 2+ spaces → RST simple table.
@@ -900,7 +891,7 @@ class PgRST(PgFile, PgUtil):
             line = lines[i]
             ms = re.match(r'^\s+-\s+(.*)', line)
             if ms:
-               content += "#. " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
+               content += "*. " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
             else:
                content += "   " + self.replace_option_link(line, secid, 1) + "\n"
          content += "\n"
@@ -1031,7 +1022,7 @@ class PgRST(PgFile, PgUtil):
             if ms:
                content += "| {}{}{} {}\n".format(self.Q1, self.DOCS['DOCNAM'], self.Q2, ms.group(1))
             else:
-               content += "|   {}\n".format(line.strip())
+               content += "|{}\n".format(line)
       content += "\n"
 
       return content
@@ -1077,11 +1068,11 @@ class PgRST(PgFile, PgUtil):
          title (str): Section title text to look up.
 
       Returns:
-         str: RST `` `title <sectionN.rst>`_ `` link, or *title* if not found.
+         str: RST `` `title <sectionN>`_ `` link, or *title* if not found.
       """
       for section in self.sections:
          if title == section['title']:
-            return "`{} <section{}.rst>`_".format(title, section['secid'])
+            return "`{} <section{}>`_".format(title, section['secid'])
 
       return title
 

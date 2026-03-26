@@ -1,11 +1,10 @@
 ################################################################################
 #
-#     Title : section.temp
+#     Title : section_rst.temp
 #    Author : Zaihua Ji,  zji@ucar.edu
 #      Date : 03/17/2026
 #   Purpose : template file for help document section.rst (reStructuredText)
-#
-# Work File : $DSSHOME/lib/templates/section.temp
+#    Github : https://github.com/NCAR/rda-python-mics.git
 #
 ################################################################################
 
