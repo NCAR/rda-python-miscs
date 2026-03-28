@@ -1062,7 +1062,7 @@ class PgRST(PgFile, PgUtil):
          str: RST `` `title <sectionN>`_ `` link, or *title* if not found.
       """
       ltitle = title.lower()
-      if ltitle == "info options": ltitle = 'information option'
+      if ltitle == "info options": ltitle = 'information options'
       for section in self.sections:
          if ltitle == section['title'].lower():
             return ":ref:`{} <section{}>`".format(title, section['secid'])
