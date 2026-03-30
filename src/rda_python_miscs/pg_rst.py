@@ -139,19 +139,13 @@ class PgRST(PgFile, PgUtil):
 
       self.parse_docs(docname)
       if not self.sections: self.pglog(docname + ": empty document", self.LGWNEX)
-
       self.DOCS['DOCNAM'] = docname
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
       self.change_local_directory(self.DOCS['DOCDIR'], self.LGWNEX)
       self.pglog("Write rst document '{}' under {}".format(docname, self.DOCS['DOCDIR']), self.LOGWRN)
-
-      if op.exists(op.join(self.DOCS['DOCDIR'], "index.rst")):  # write index file once
-         self.pglog("index.rst exists already, delete first if needs to be regenerated", self.LOGWRN)
-      else:
-         self.write_index(self.sections[0])
-
+      self.write_index(self.sections[0])
       for section in self.sections:
          self.write_section(section)
 
@@ -183,7 +177,7 @@ class PgRST(PgFile, PgUtil):
             else:
                line = line.rstrip()   # remove trailing white spaces
 
-            ms = re.match(r'^([\d\.]+)\s+(.+)$', line)
+            ms = re.match(r'^([\d\.]+)\s+([A-Z].+)$', line)
             if ms:   # start new section
                section = self.record_section(section, option, example, ms.group(1), ms.group(2))
                option = example = None
@@ -284,15 +278,17 @@ class PgRST(PgFile, PgUtil):
       """
       if example:
          lines = example['desc'].split('\n')
-         first_line = lines[0]
-         rest = '\n'.join(lines[1:]) if len(lines) > 1 else ''
-         ms = re.match(r'^(.*)\.\s*(.*)$', first_line)
-         if ms:
-            example['title'] = ms.group(1)
-            example['desc'] = (ms.group(2) + '\n' + rest) if rest else ms.group(2)
-         else:
-            example['title'] = first_line
-            example['desc'] = rest
+         lcnt = len(lines)
+         title = lines[0].strip()
+         ol = 1
+         if title[-1] != ':':
+            for l in range(1, lcnt):
+               line = lines[l].strip()
+               title += ' ' + line
+               ol += 1
+               if line[-1] == ':': break
+         example['desc'] = '\n'.join(lines[ol:]) if lcnt > ol else ''
+         example['title'] = title
          option['exmidxs'].append(len(self.examples))   # record example index in option
          self.examples.append(example)     # record example globally
 
@@ -487,20 +483,18 @@ class PgRST(PgFile, PgUtil):
       clevel = csection['level'] if csection else 0
       csecid = csection['secid'] if csection else ""
       depth = self.TLEVEL - clevel
+      level = clevel+1
+      preid = csecid+'.'
 
       # nested bullet list for all sections
       for section in self.sections:
          secid = section['secid']
-         level = section['level']
-         if csecid:
-            if not secid.startswith(csecid + "."): continue
-         elif level > (clevel+1):
-            continue
-         content += "   section{}\n".format(secid)
+         if csecid and not secid.startswith(preid): continue
+         if section['level'] == level: content += "   section{}\n".format(secid)
 
       if not content: return ""
 
-      content = f".. toctree::\n   :maxdepth: {depth}\n   :caption: Table of Contents\n{content}\n"
+      content = f".. toctree::\n   :maxdepth: {depth}\n   :caption: Table of Contents\n\n{content}\n"
       # appendix A: list of examples for the parent section and its subsections
       appendix = ""
       idx = 1  # used as example index
@@ -508,8 +502,8 @@ class PgRST(PgFile, PgUtil):
          opt = exm['opt']
          option = self.options[opt]
          secid = option['secid']
-         if not csecid or secid == csecid or secid.startswith(csecid + "."):
-            appendix += "- `A.{}. {} Option -{} (-{}) <{}_e{}>`_\n".format(
+         if not csecid or secid == csecid or secid.startswith(preid):
+            appendix += "- :ref:`A.{}. {} Option -{} (-{}) <{}_e{}>`\n".format(
                         idx, option['type'], opt, option['name'], secid, idx)
          idx += 1
       if appendix:
@@ -577,7 +571,7 @@ class PgRST(PgFile, PgUtil):
       Emits a ``.. _<opt>:`` label followed by a title line of the form::
 
          <Type> Option -**XX** (-**longname**) [Alias(es): ...] :
-         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
       The ``~`` underline is sized to match the actual title line length
       (including RST bold markers).
@@ -604,7 +598,7 @@ class PgRST(PgFile, PgUtil):
 
       content = "\n.. _{}:\n\n".format(opt)
       content += title + "\n"
-      content += "~" * len(title) + "\n\n"
+      content += "^" * len(title) + "\n\n"
 
       return content
 
@@ -673,33 +667,27 @@ class PgRST(PgFile, PgUtil):
 
       for optary in opts:
          opt = self.get_short_option(optary[1])
+      
          pre = optary[0]
          after = optary[2]
          secid = self.options[opt]['secid']
-         anchor = None   # RST anchor name for same-file or cross-file links (.. _NAME:)
-         if secid == csecid:
-            anchor = opt
-         elif self.options[opt]['type'] == "Action":
-            anchor = "section{}".format(secid)
-         elif ptype == 2 and opt == "FN":
-            anchor = "field"
-         else:
-            anchor = "section{}".format(secid)
-
-         ms = re.search(r'-\(({}\|\w+)\)'.format(opt), line)
+         anchor = opt
+         ms = re.search(r'(-\({}\|\w+\))'.format(opt), line)
          if ms:
             if secid == csecid and ptype == 2: continue
             opt = ms.group(1)
-            after = ')'
+            pre = after = ''
+         else:
+            ms = re.search(r'(-{})'.format(opt), line)
+            if ms:
+               opt = ms.group(1)
+               pre = pre[:-1]
 
          replace = pre + opt + after
-         if opt == anchor:
-            link = "{}`{}`_{}".format(pre, opt, after)
-         else:
-            link = "{}`{} <{}_>`_{}".format(pre, opt, anchor, after)
+         link = "{}:ref:`{} <{}>`{}".format(pre, opt, anchor, after)
          line = line.replace(replace, link)
 
-      opts = re.findall(r'(^|\W){}( Options*\W|\W|$)'.format(self.SEARCH), line)
+      opts = re.findall(r'(^|\W){}(\s+(o|O)ptions*\W|\W|$)'.format(self.SEARCH), line)
       for optary in opts:
          opt = optary[1]
          if not self.SECIDS[opt]: continue
@@ -708,20 +696,14 @@ class PgRST(PgFile, PgUtil):
          pre = optary[0]
          after = optary[2]
          replace = pre + opt + after
-         ms = re.search(r'(\sOptions*)\W', after)
+         ms = re.search(r'(\s+Options*)\W', after, re.I)
          if ms:
             opt += ms.group(1)
             after = after.replace(ms.group(1), '')
          if ptype == 2 and re.search(r'Mode Options*', opt) and dtype == 3:
-            link = "{}`{} <mode_>`_{}".format(pre, opt, after)
+            link = "{}:ref:`{} <mode{}>`{}".format(pre, opt, csecid, after)
          else:
-            link = "{}`{} <section{}>`_{}".format(pre, opt, secid, after)
-         line = line.replace(replace, link)
-
-      ms = re.search(r'(https*://\S+)(\.|\,)', line)
-      if ms:
-         replace = ms.group(1)
-         link = "`{} <{}>`_".format(replace, replace)
+            link = "{}:ref:`{} <section{}>`{}".format(pre, opt, secid, after)
          line = line.replace(replace, link)
 
       # Q0...Q0 is a source-document quoting convention: Q0wordQ0 marks
@@ -776,7 +758,7 @@ class PgRST(PgFile, PgUtil):
                   lines = []
                   ptype = 1
                   cnt = 0
-               elif cnt == 1 and re.match(r'^\s+%s\s(-|\[|ds\d*|\d+|[A-Z]{2}\s)' % self.DOCS['DOCNAM'], line):
+               elif cnt == 1 and re.match(r'^\s+%s\s(-|\[|[a-z]\d{6}|[A-Z]{2}\s)' % self.DOCS['DOCNAM'], line):
                   ptype = 2
          elif cnt > 0:
             content += self.create_desc_content(lines, cnt, secid, dtype, ptype)
@@ -821,7 +803,7 @@ class PgRST(PgFile, PgUtil):
 
       * ``dtype=2`` with a ``<<Content ...>>`` header line: renders the
         remaining lines as a verbatim content block.
-      * ``dtype=3``: prefixes "Mode options that…" lines with a ``.. _mode:``
+      * ``dtype=3``: prefixes "Mode options that…" lines with a ``.. _mode<secid>:``
         anchor and "Use Info option -FN…" lines with a ``.. _field:`` anchor.
 
       Args:
@@ -841,30 +823,27 @@ class PgRST(PgFile, PgUtil):
       if dtype == 2:
          ms = re.match(r'^<<(Content .*)>>$', line0)
          if ms:   # input files for examples
-            content += ms.group(1) + ":\n\n"
+            content += ms.group(1) + ":\n\n.. code-block:: none\n\n"
             normal = 0
             for i in range(1, cnt):
                line = lines[i]
                if doreplace and line.find('<:>') > -1 and not re.match(r'^[A-Z]\w+<:>[A-Z]\w+<:>', line):
                   doreplace = 0
                if doreplace:
-                  content += self.replace_option_link(line, secid, 0) + "\n"
+                  content += ' '+self.replace_option_link(line, secid, 0) + "\n"
                else:
-                  content += line + "\n"
+                  content += ' '+line + "\n"
                   if re.match(r'^\[\w+\]$', line): doreplace = 1
             content += "\n"
       if normal:   # normal paragraph
          ii = 0
          if dtype == 3:
             if re.match(r'^\s*Mode options* that ', line0):
-               content += ".. _mode:\n\n" + self.replace_option_link(line0, secid, 0) + "\n"
-               ii = 1
-            elif re.match(r'^\s*Use Info option -FN ', line0):
-               content += ".. _field:\n\n" + self.replace_option_link(line0, secid, 0) + "\n"
+               content += f".. _mode{secid}:\n\n" + self.replace_option_link(line0, secid, 0).strip() + "\n"
                ii = 1
          for i in range(ii, cnt):
             line = lines[i]
-            content += self.replace_option_link(line, secid, 0) + "\n"
+            content += self.replace_option_link(line, secid, 0).strip() + "\n"
          content += "\n"
 
       return content
@@ -891,16 +870,17 @@ class PgRST(PgFile, PgUtil):
       """
       line0 = lines[0]
       ms = re.match(r'^\s+-\s+(.*)', line0)
-      if ms:   # create a numbered list
-         content = "#. " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
+      if ms:
+         content = "* " + self.replace_option_link(ms.group(1), secid, 1)
          for i in range(1, cnt):
             line = lines[i]
             ms = re.match(r'^\s+-\s+(.*)', line)
             if ms:
-               content += "* " + self.replace_option_link(ms.group(1), secid, 1) + "\n"
+               content += "\n* " + self.replace_option_link(ms.group(1), secid, 1)
             else:
-               content += "   " + self.replace_option_link(line, secid, 1) + "\n"
-         content += "\n"
+               
+               content += " " + self.replace_option_link(line, secid, 1).lstrip()
+         content += "\n\n"
       elif re.search(r'=>$', line0):
          line = re.sub(r'={1,}', '=', line0)
          content = "| {}\n".format(line)
@@ -934,22 +914,22 @@ class PgRST(PgFile, PgUtil):
                   prev_vals[1] += " " + self.replace_option_link(line, secid, 1)
             if prev_vals:
                rows.append(tuple(prev_vals))
-            content = self._build_rst_list_table(rows)
+            content = self.build_rst_list_table(rows)
          else:
             # multi-column table split on 2+ spaces
             rows = []
             for i in range(cnt):
-               line = lines[i]
+               line = lines[i].strip()
                vals = re.split(r'\s{2,}', self.replace_option_link(line, secid, 1))
                rows.append(vals)
-            content = self._build_rst_simple_table(rows) + "\n"
+            content = self.build_rst_simple_table(rows) + "\n"
 
       return content
 
    #
    # build a two-column rst list-table
    #
-   def _build_rst_list_table(self, rows):
+   def build_rst_list_table(self, rows):
       """Render *rows* as an RST ``.. list-table::`` directive.
 
       Args:
@@ -959,9 +939,11 @@ class PgRST(PgFile, PgUtil):
          str: RST list-table directive string, or ``''`` if *rows* is empty.
       """
       if not rows: return ""
-      content = ".. list-table::\n   :widths: auto\n\n"
+      content = ".. list-table::\n   :widths: auto\n   :header-rows: 0\n\n"
       for col0, col1 in rows:
+         if col0[0] == '-': col0 = col0[1:]
          content += "   * - {}\n".format(col0)
+         if col1[0] == '-': col1 = col1[1:]
          content += "     - {}\n".format(col1)
       content += "\n"
       return content
@@ -969,7 +951,7 @@ class PgRST(PgFile, PgUtil):
    #
    # build a multi-column rst simple table
    #
-   def _build_rst_simple_table(self, rows):
+   def build_rst_simple_table(self, rows):
       """Render *rows* as an RST simple (grid-free) table.
 
       Column widths are computed from the widest cell in each column, with a
@@ -990,11 +972,17 @@ class PgRST(PgFile, PgUtil):
             if j < ncols:
                widths[j] = max(widths[j], len(val), 1)
       sep = "  ".join("=" * w for w in widths) + "\n"
-      content = sep
+#      content = sep
+      content = ".. list-table::\n   :widths: auto\n   :header-rows: 1\n\n"
       for row in rows:
-         padded = ["{:<{}}".format(row[j] if j < len(row) else "", widths[j]) for j in range(ncols)]
-         content += "  ".join(padded) + "\n"
-      content += sep
+         v = row[0] + "\n"
+         if len(v) > 1 and v[0] == '-': v = v[1:]
+         content += "   * - " + v
+         for c in range(1, ncols):
+            v = row[c] + "\n"
+            if len(v) > 1 and v[0] == '-': v = v[1:]
+            content += "     - " + v
+
       return content
 
    #
@@ -1021,14 +1009,11 @@ class PgRST(PgFile, PgUtil):
 
       for i in range(cnt):
          line = self.replace_option_link(lines[i], secid, 2, dtype)
-         if re.search(r'\sor\s', line, re.I):
-            content += "\n**Or**\n\n"
+         ms = re.match(r'^\s*{}\s+(.+)$'.format(self.DOCS['DOCNAM']), line)
+         if ms:
+            content += "|  {}{}{} {}\n".format(self.Q1, self.DOCS['DOCNAM'], self.Q2, ms.group(1))
          else:
-            ms = re.match(r'^\s*{}\s+(.+)$'.format(self.DOCS['DOCNAM']), line)
-            if ms:
-               content += "| {}{}{} {}\n".format(self.Q1, self.DOCS['DOCNAM'], self.Q2, ms.group(1))
-            else:
-               content += "|{}\n".format(line)
+            content += "|    "+line+"\n"
       content += "\n"
 
       return content
@@ -1076,9 +1061,11 @@ class PgRST(PgFile, PgUtil):
       Returns:
          str: RST `` `title <sectionN>`_ `` link, or *title* if not found.
       """
+      ltitle = title.lower()
+      if ltitle == "info options": ltitle = 'information options'
       for section in self.sections:
-         if title == section['title']:
-            return "`{} <section{}>`_".format(title, section['secid'])
+         if ltitle == section['title'].lower():
+            return ":ref:`{} <section{}>`".format(title, section['secid'])
 
       return title
 
