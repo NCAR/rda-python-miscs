@@ -882,11 +882,11 @@ class PgRST(PgFile, PgUtil):
                content += " " + self.replace_option_link(line, secid, 1).lstrip()
          content += "\n\n"
       elif re.search(r'=>$', line0):
-         line = re.sub(r'={1,}', '=', line0)
-         content = "| {}\n".format(line)
+#         line = re.sub(r'={1,}', '=', line0)
+         content = "| {}\n".format(line0)
          for i in range(1, cnt):
             line = lines[i]
-            line = re.sub(r'={2,}', '=', line)
+#            line = re.sub(r'={2,}', '=', line)
             content += "| {}\n".format(line)
          content += "\n"
       else:
@@ -971,19 +971,20 @@ class PgRST(PgFile, PgUtil):
          for j, val in enumerate(row):
             if j < ncols:
                widths[j] = max(widths[j], len(val), 1)
-      sep = "  ".join("=" * w for w in widths) + "\n"
-#      content = sep
-      content = ".. list-table::\n   :widths: auto\n   :header-rows: 1\n\n"
+      content = ".. list-table::\n   :widths: auto\n   :header-rows: 1\n"
       for row in rows:
-         v = row[0] + "\n"
+         if len(row) == 1:
+            content += " " + row[0]
+            continue
+         v = row[0]
          if len(v) > 1 and v[0] == '-': v = v[1:]
-         content += "   * - " + v
+         content += "\n   * - " + v
          for c in range(1, ncols):
-            v = row[c] + "\n"
+            v = row[c]
             if len(v) > 1 and v[0] == '-': v = v[1:]
-            content += "     - " + v
+            content += "\n     - " + v
 
-      return content
+      return content + "\n"
 
    #
    # description type (dtype): 0 - section, 1 - option, 2 - example, 3 - action
@@ -1011,9 +1012,9 @@ class PgRST(PgFile, PgUtil):
          line = self.replace_option_link(lines[i], secid, 2, dtype)
          ms = re.match(r'^\s*{}\s+(.+)$'.format(self.DOCS['DOCNAM']), line)
          if ms:
-            content += "|  {}{}{} {}\n".format(self.Q1, self.DOCS['DOCNAM'], self.Q2, ms.group(1))
+            content += "| {}{}{} {}\n".format(self.Q1, self.DOCS['DOCNAM'], self.Q2, ms.group(1))
          else:
-            content += "|    "+line+"\n"
+            content += "|  "+line+"\n"
       content += "\n"
 
       return content
