@@ -713,7 +713,7 @@ class PgRST(PgFile, PgUtil):
          if opt not in self.EMLIST: continue  # quote only predefined ones
          replace = self.Q0 + opt + self.Q0
          if re.search(self.DOCS['DOCLNK'], opt):
-            link = "`{} <https://gdex-docs-{}.readthedocs.io/en/latest/index.html>`_".format(opt, opt)
+            link = "`{} <https://gdex-docs-{}.readthedocs.io>`_".format(opt, opt)
          else:
             link = self.Q1 + opt + self.Q2
          line = line.replace(replace, link)
