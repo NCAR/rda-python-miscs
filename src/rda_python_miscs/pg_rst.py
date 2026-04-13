@@ -1270,13 +1270,13 @@ def main():
         ),
     )
     parser.add_argument(
-        '--docdir',
+        '-d', '--docdir',
         default=None,
         metavar='DIR',
         help=(
             "Root directory under which the per-document RST output directory "
             "is created (default: current working directory).  "
-            "The final output lands in <docdir>/<docname>/."
+            "The final output lands in <docdir>/."
         ),
     )
     args = parser.parse_args()
