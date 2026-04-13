@@ -18,6 +18,7 @@ import re
 import inspect
 import argparse
 import importlib
+import importlib.util
 from os import path as op
 from rda_python_common.pg_file import PgFile
 from rda_python_common.pg_util import PgUtil
@@ -1164,6 +1165,62 @@ class PgRST(PgFile, PgUtil):
 
       return opts, alias, origin
 
+   def load_opts_alias_from_pyfile(self, pyfile):
+      """Load OPTS and ALIAS from a Python file given by path.
+
+      Uses ``importlib.util.spec_from_file_location`` to import the file
+      without requiring it to be on ``sys.path``.  Resolution order mirrors
+      :meth:`load_opts_alias`: class attributes first, then module-level.
+
+      Args:
+         pyfile (str): Absolute or relative path to the Python source file.
+
+      Returns:
+         tuple[dict, dict]: ``(OPTS, ALIAS)`` where ALIAS defaults to ``{}``
+         when not found.
+
+      Raises:
+         SystemExit: via :func:`PgLOG.pglog` (``LGWNEX``) if the file
+                     cannot be loaded or ``OPTS`` cannot be found.
+      """
+      pyfile  = op.abspath(pyfile)
+      modname = op.splitext(op.basename(pyfile))[0]
+      try:
+         spec = importlib.util.spec_from_file_location(modname, pyfile)
+         mod  = importlib.util.module_from_spec(spec)
+         spec.loader.exec_module(mod)
+      except Exception as exc:
+         self.pglog(
+            "Cannot load module from '{}': {}".format(pyfile, exc),
+            self.LGWNEX,
+         )
+
+      cls = next(
+         (obj for _, obj in inspect.getmembers(mod, inspect.isclass)
+          if obj.__module__ == modname),
+         None,
+      )
+
+      if cls is not None:
+         obj   = cls()
+         opts  = getattr(obj, 'OPTS',  None)
+         alias = getattr(obj, 'ALIAS', None)
+      else:
+         opts  = getattr(mod, 'OPTS',  None)
+         alias = getattr(mod, 'ALIAS', None)
+
+      if opts is None:
+         self.pglog(
+            "File '{}' does not define OPTS (checked class and "
+            "module level)".format(pyfile),
+            self.LGWNEX,
+         )
+
+      if alias is None:
+         alias = {}
+
+      return opts, alias
+
 
 # ---------------------------------------------------------------------------
 # Command-line entry point
@@ -1174,40 +1231,81 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "Convert a .usg help document to reStructuredText (.rst) using RST templates. "
-            "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py: "
-            "the module is searched first for module-level OPTS/ALIAS variables, "
-            "then for a class defined in that module that carries both as class "
-            "attributes."
+            "OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py "
+            "(or from --pyfile if given): "
+            "the module is searched first for a class that carries both as class "
+            "attributes, then for module-level OPTS/ALIAS variables."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         'docname',
+        nargs='?',
+        default=None,
         help=(
             "Short document name, e.g. 'dsarch' or 'dsupdt'.  "
-            "The module rda_python_<docname>/<docname>.py must be importable "
-            "and must define OPTS (and optionally ALIAS) either at module "
-            "level or as class attributes."
+            "Required unless --usgfile is given, in which case the name is "
+            "derived from the .usg filename by removing the extension."
         ),
     )
     parser.add_argument(
-        '--docdir',
+        '-u', '--usgfile',
+        default=None,
+        metavar='FILE',
+        help=(
+            "Path to the .usg source document.  When given, docname is derived "
+            "from the filename by removing the .usg extension, and ORIGIN is set "
+            "to the directory containing the file."
+        ),
+    )
+    parser.add_argument(
+        '-p', '--pyfile',
+        default=None,
+        metavar='FILE',
+        help=(
+            "Path to a Python file that defines OPTS (and optionally ALIAS) "
+            "either at module level or as class attributes.  When given, the "
+            "module-import convention (rda_python_<docname>/<docname>.py) is "
+            "bypassed."
+        ),
+    )
+    parser.add_argument(
+        '-d', '--docdir',
         default=None,
         metavar='DIR',
         help=(
             "Root directory under which the per-document RST output directory "
             "is created (default: current working directory).  "
-            "The final output lands in <docdir>/<docname>/."
+            "The final output lands in <docdir>/."
         ),
     )
     args = parser.parse_args()
 
     pg = PgRST()
-    opts, alias, origin = pg.load_opts_alias(args.docname)
-    pg.DOCS['ORIGIN'] = origin
+
+    # Resolve docname: explicit arg takes priority, then derive from --usgfile.
+    if args.docname:
+        docname = args.docname
+    elif args.usgfile:
+        docname = op.splitext(op.basename(args.usgfile))[0]
+    else:
+        parser.error("docname is required when --usgfile is not given")
+
+    # Set ORIGIN from --usgfile directory when provided.
+    if args.usgfile:
+        pg.DOCS['ORIGIN'] = op.dirname(op.abspath(args.usgfile)) or os.getcwd()
+
+    # Load OPTS/ALIAS: from --pyfile path or via module-import convention.
+    if args.pyfile:
+        opts, alias = pg.load_opts_alias_from_pyfile(args.pyfile)
+    else:
+        opts, alias, origin = pg.load_opts_alias(docname)
+        if not args.usgfile:
+            pg.DOCS['ORIGIN'] = origin
+
     if args.docdir is not None:
         pg.DOCS['DOCDIR'] = args.docdir
-    pg.process_docs(args.docname, opts, alias)
+    pg.process_docs(docname, opts, alias)
 
 if __name__ == "__main__":
     main()
