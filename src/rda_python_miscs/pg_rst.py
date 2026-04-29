@@ -873,6 +873,13 @@ class PgRST(PgFile, PgUtil):
          str: RST-formatted table or list content.
       """
       line0 = lines[0]
+      if any('-->' in line for line in lines):
+         max_width = max(len(line) for line in lines)
+         content = ".. code-block:: none\n\n"
+         for line in lines:
+            content += "   " + line.ljust(max_width) + "\n"
+         content += "\n"
+         return content
       ms = re.match(r'^\s+-\s+(.*)', line0)
       if ms:
          content = "* " + self.replace_option_link(ms.group(1), secid, 1)
