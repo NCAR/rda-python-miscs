@@ -288,9 +288,10 @@ class PgRST(PgFile, PgUtil):
          if title[-1] != ':':
             for l in range(1, lcnt):
                line = lines[l].strip()
-               title += ' ' + line
                ol += 1
-               if line[-1] == ':': break
+               if line:
+                  title += ' ' + line
+                  if line[-1] == ':': break
          example['desc'] = '\n'.join(lines[ol:]) if lcnt > ol else ''
          example['title'] = title
          option['exmidxs'].append(len(self.examples))   # record example index in option
@@ -991,7 +992,8 @@ class PgRST(PgFile, PgUtil):
          if len(v) > 1 and v[0] == '-': v = v[1:]
          content += "\n   * - " + v
          for c in range(1, ncols):
-            v = row[c]
+            # Handle IndexError by using empty string if column is missing
+            v = row[c] if c < len(row) else ""
             if len(v) > 1 and v[0] == '-': v = v[1:]
             content += "\n     - " + v
 
