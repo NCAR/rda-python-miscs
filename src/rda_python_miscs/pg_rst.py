@@ -664,11 +664,11 @@ class PgRST(PgFile, PgUtil):
          else:
             opts = re.findall(r'(^)([a-zA-Z]{2,})(<%s>)/' % ms.group(1), line)
       elif ptype == 2:
-         opts = re.findall(r'(-\(*)([a-zA-Z]{2,})(\W|$)', line)
+         opts = re.findall(r'([\(\[\s]-\(*)([a-zA-Z]{2,})(\W|$)', line)
          ms = re.match(r'^\s*%s(\s+[\w\.]+\s+|\s+)([a-zA-Z]{2})(\s)' % self.DOCS['DOCNAM'], line)
          if ms: opts = [ms.groups()] + opts
       else:
-         opts = re.findall(r'(^-\(*|\W-\(*)([a-zA-Z]{2,})(\W|$)', line)
+         opts = re.findall(r'(^-\(*|[\(\[\s]-\(*)([a-zA-Z]{2,})(\W|$)', line)
 
       for optary in opts:
          opt = self.get_short_option(optary[1])
