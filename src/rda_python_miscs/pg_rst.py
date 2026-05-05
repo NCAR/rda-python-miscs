@@ -285,7 +285,7 @@ class PgRST(PgFile, PgUtil):
          lcnt = len(lines)
          title = lines[0].strip()
          ol = 1
-         if title[-1] != ':':
+         if title[-1:] != ':':
             for l in range(1, lcnt):
                line = lines[l].strip()
                ol += 1
