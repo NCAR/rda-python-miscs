@@ -7,7 +7,7 @@
 #            https://github.com/NCAR/rda-utility-programs.git
 #            2025-12-29 convert to class BashQsub
 #   Purpose: python script to submit a batch job on PBS node via bash script
-#    Github: https://github.com/NCAR/rda-pythn-miscs.git
+#    Github: https://github.com/NCAR/rda-python-miscs.git
 ##################################################################################
 import os
 import sys
@@ -16,8 +16,14 @@ from os import path as op
 from rda_python_common.pg_log import PgLOG
 
 class BashQsub(PgLOG):
+   """Submit a PBS batch job via a dynamically generated bash script using qsub.
+
+   Builds a bash script with PBS directives, module loads, and conda environment
+   activation, then submits it through the PBS qsub command.
+   """
 
    def __init__(self):
+      """Initialize BashQsub with default PBS resource settings and options."""
       super().__init__()
       self.DEFMODS = {
          'default': "ncarenv,netcdf,ncl,nco,cdo,conda,grib-util,wgrib2"
@@ -42,8 +48,15 @@ class BashQsub(PgLOG):
       self.gdexsub = self.BCHCMDS['PBS']
       self.args = None
 
-   # function to readparameters
+   # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments and populate PBS options and customized options.
+
+      Handles single-dash qsub options (e.g. -q, -A, -l) and long custom options
+      (-cmd, -cwd, -env, -mod, -res). Validates that the qsub command is available
+      and that a -cmd value is provided. Sets default log paths and job name if not
+      specified, and changes the working directory if -cwd is given.
+      """
       aname = 'bashqsub'
       pname = 'gdexqsub'
       self.set_help_path(__file__)
@@ -88,11 +101,12 @@ class BashQsub(PgLOG):
       if not self.SOPTIONS['e']: self.SOPTIONS['e'] = "{}/{}/".format(self.PGLOG['LOGPATH'], pname)
       if 'N' not in self.SOPTIONS: self.SOPTIONS['N'] = op.basename(self.coptions['cmd'])
       if self.coptions['cwd']:
-         if 's' in self.coptions['cwd']: self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
+         if '$' in self.coptions['cwd']: self.coptions['cwd'] = self.replace_environments(self.coptions['cwd'], '', self.LGWNEX)
          os.chdir(self.coptions['cwd'])
 
    # function to start actions
    def start_actions(self):
+      """Resolve the command path, build the bash script, and submit it via qsub."""
       cmd = self.valid_command(self.coptions['cmd'])
       if not cmd and not re.match(r'^/', self.coptions['cmd']): cmd = self.valid_command('./' + self.coptions['cmd'])
       if not cmd: self.pglog(self.coptions['cmd'] + ": Cannot find given command to run", self.LGWNEX)
@@ -105,6 +119,17 @@ class BashQsub(PgLOG):
    
    # build bash script to submit a PBS batch job
    def build_bash_script(self, cmd):
+      """Build and return a bash script string with PBS directives for the given command.
+
+      Sets HOME, sources system and conda profile scripts and the user's .bashrc,
+      loads modules, activates the conda environment, then runs the command.
+
+      Args:
+         cmd (str): The fully-resolved command (with arguments) to execute in the job.
+
+      Returns:
+         str: The complete bash batch script content.
+      """
       buf = "#!/usr/bin/bash\n\n"   # qsub starting bash script
       if 'l' in self.SOPTIONS: self.add_resources()
       # add options to bash script for qsub
@@ -128,8 +153,13 @@ class BashQsub(PgLOG):
       buf += "\necho {}\n{}\n\ndate\n".format(cmd, cmd)
       return buf
 
-   # check and add resource options 
+   # check and add resource options
    def add_resources(self):
+      """Parse -l option value into the RESOURCES dict and remove the raw -l entry.
+
+      Expects comma-separated name=value pairs (e.g. 'walltime=2:00:00,select=1:ncpus=4').
+      Logs an error if a token does not contain '='.
+      """
       for res in re.split(',', self.SOPTIONS['l']):
          ms = re.match(r'^([^=]+)=(.+)$', res)
          if ms:
@@ -140,6 +170,20 @@ class BashQsub(PgLOG):
 
    # add module loads for modules provided
    def add_modules(self, res, mods):
+      """Build and return module load/unload commands for the bash script.
+
+      Loads the default module set for the given reservation (or the 'default' set).
+      Additional modules in ``mods`` are appended; path-style entries (starting with
+      '/') use 'module use' instead of 'module load'.  Modules already in the default
+      set are skipped.  SWAPMODS entries trigger an unload before the new load.
+
+      Args:
+         res (str): Reservation name used to look up DEFMODS; falls back to 'default'.
+         mods (str): Comma-separated list of extra modules (or None).
+
+      Returns:
+         str: Shell commands to load/unload modules.
+      """
       mbuf = "\n"
       defmods = self.DEFMODS[res] if res in self.DEFMODS else self.DEFMODS['default']
       dmods = re.split(',', defmods)
@@ -163,6 +207,16 @@ class BashQsub(PgLOG):
 
    # set virtual machine libraries
    def set_vm_libs(self, res):
+      """Build and return conda/VM library activation commands for the bash script.
+
+      Looks up DEFLIBS for the given reservation (falls back to 'default').
+
+      Args:
+         res (str): Reservation name used to look up DEFLIBS; falls back to 'default'.
+
+      Returns:
+         str: Shell commands to activate virtual environment libraries, or '' if none.
+      """
       deflibs = self.DEFLIBS[res] if res in self.DEFLIBS else self.DEFLIBS['default']
       if not deflibs: return ''
       dlibs = re.split(',', deflibs)
@@ -171,8 +225,9 @@ class BashQsub(PgLOG):
          libbuf += dlib + "\n"
       return libbuf
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate BashQsub, parse arguments, run, and exit."""
    object = BashQsub()
    object.read_parameters()
    object.start_actions()

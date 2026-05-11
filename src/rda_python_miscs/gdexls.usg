@@ -1,60 +1,74 @@
 
- List directory and file information of the current or specified directories
- with metadata information if matched. Four columns are listed, they are Directory
- Name, Data Volume, File Count, and Brief Description if the listed item is a
- directory, and they are File Name, Data Size, Data Format, and Brief Description
- if the listed item is a file.
- 
- A leading letter is displayed on each line to indicate what type item is listed;
- including 'D' for a whole dataset, 'G' for a group or subgroup in a dataset,
- and 'F' for a data file.
- 
- The output of directory/file list is formatted as default with double spaces
- as delimiter and each column lined up vertically at least for the files under each
- directory. Provide Option -N to display list without format. A delimiter symbol '|'
- is defaulted if Option -N is present.
- 
+ List local files and directories with matching metadata from the GDEX database.
+ Each output line has four columns:
+
+   For a dataset root (D) or group (G):
+     Name  |  Total Data Volume  |  File Count  |  Description
+
+   For a data file (F):
+     Name  |  File Size  |  Data Format  |  Note
+
+ A leading letter on each line indicates the item type:
+   D - dataset root directory
+   G - group or sub-group directory within a dataset
+   F - individual data file
+
+ Output is column-aligned by default using double spaces as the delimiter.
+ Use -N to disable formatting; the delimiter then defaults to '|'.
+ Nothing is displayed if no matching GDEX metadata is found for the given paths.
+
  Usage: gdexls [-d] [-f] [-N] [-h] [-r] [-D DelimitSymbols] [-R RecursiveLevel] [Directory/File List]
 
-      - Option -d, list directory information only. Directory information
-        is included as default. Add this option to exclude file information;
+      - Option -d, list dataset/group (directory) information only.
+        Both directories and files are listed by default; this option
+        suppresses file output;
 
-      - Option -f, list file information only. File information
-        is included as default. Add this option to exclude directory information;
+      - Option -f, list file information only.
+        Both directories and files are listed by default; this option
+        suppresses directory output;
 
-      - Option -N, list files unformatted;
+      - Option -N, display output without column alignment;
 
       - Option -h, display this help document;
 
-      - Option -r, list directories and files recursively;
+      - Option -r, list directories and files recursively (no depth limit);
 
-      - Option -R, list directories and files recursively up to the level 
-        provided with this Option;
+      - Option -R RecursiveLevel, list recursively up to the specified depth.
+        -R 1 lists only the immediate contents of each given directory;
 
-      - Option -D, specify delimiting symbols for dividing the columns.
-        It defaults to "  " for formatted output and '|' for unformatted output.
-        Make sure quote the symbols if any character in the symbols has Unix
-        meaning, for example -D '<:>';
+      - Option -D DelimitSymbols, specify the column delimiter string.
+        Defaults to "  " (two spaces) for formatted output and '|' for
+        unformatted (-N) output. Quote the string if it contains shell
+        metacharacters, e.g. -D '<:>';
 
-      - Directory/file List is optional; without specification, all directories
-        and files in the current directory are listed. Unix command line
-        wildcards are supported.
+      - Directory/File List is optional. Without it, all entries in the
+        current directory are listed. Shell wildcards are supported.
 
-  This utility program can be executed anywhere. Nothing is displayed if neither
-  directory nor file information pre-gathered in database.
+  This utility can be run from any directory. It searches the GDEX database
+  using the resolved absolute path of each argument, so both absolute and
+  relative paths are accepted.
 
-  For examples, to check directories and files of d277006, you can
+  Examples for dataset d277006:
 
-     1. Change into the dataset home data directory as 'cd /PathTo/d277006' and
-        execute 'gdexls'; add recursive option '-r' to check directories and files
-        further into the sub-directories, or change directory into a sub-directory
-        to check files inside of it.
+     1. Change into the dataset home directory and run gdexls:
 
-     2. Pass an absolute path to gdexls as 'gdexls /PathTo/d277006/' or as
-        'gdexls /PathTo/d277006/*'; without the ending by '/' or an appended
-        wildcard symbol '*' information of the dataset itself is check unless
-        the recursive option '-r' or '-R RecursiveLevel' is present
+           cd /PathTo/d277006
+           gdexls
 
-     3. If the current directory is in another dataset home data directory,
-        such as /PathTo/d277006, you can pass a relative path to gdexls
-        as  'gdexls ../d277006/' or as 'gdexls ../d277006/*'
+        Add -r to recurse into sub-directories, or cd into a sub-directory
+        first to list only its contents.
+
+     2. Pass an absolute path directly:
+
+           gdexls /PathTo/d277006/      # list contents of the dataset directory
+           gdexls /PathTo/d277006/*     # same effect via shell glob expansion
+
+        Without a trailing '/' or wildcard, the dataset entry itself is listed
+        unless -r or -R is given:
+
+           gdexls /PathTo/d277006       # shows the D-line for the dataset root
+
+     3. Use a relative path from a neighbouring directory:
+
+           gdexls ../d277006/
+           gdexls ../d277006/*

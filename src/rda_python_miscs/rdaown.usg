@@ -1,46 +1,60 @@
 
- Change owner to 'rdadata' for directories and files in the current or specified
- directories. You must execute this program as 'root' to be able to change owner.
- The owner of the directories and files must be DSS specialists to be
- changed. For directories and files with ownership changed successfully or with error,
- a leading letter is displayed in font of the relative file names to indicate
- file types; 'D' for a directory and 'F' for a data file.
- 
- Usage: rdaown [-d] [-f] [-h] [-r] [-R RecursiveLevel] [Directory/File List]
+ Change ownership of files and directories to 'rdadata'.  Must be run as root.
+ Only items currently owned by DECS specialists are changed; items already owned
+ by 'rdadata' or owned by non-specialists are skipped.  A leading letter is
+ displayed in front of each changed path to indicate its type: 'D' for a
+ directory and 'F' for a file.
 
-      - Option -d, change directory owner only. Changing Directory owner is included
-        as default. Add this option to exclude changing file owner;
- 
-      - Option -f, change file owner only. Changing File owner is included
-        as default. Add this option to exclude changing Directory owner;
- 
+ Usage: rdaown [-d] [-f] [-h] [-r] [-R RecursiveLevel] Directory/File List
+
+      - Option -d, change directory ownership only.  Both directories and files
+          are processed by default; this option suppresses file ownership changes;
+
+      - Option -f, change file ownership only.  Both directories and files are
+          processed by default; this option suppresses directory ownership changes;
+
       - Option -h, display this help document;
 
-      - Option -r, change owner for directories and files recursively;
+      - Option -r, change ownership recursively (no depth limit);
 
-      - Option -R, change owner for directories and files recursively up to
-        the level provided with this Option;
+      - Option -R RecursiveLevel, change ownership recursively up to the specified
+          depth.  -R 1 processes only the immediate contents of each given directory;
 
-      - Directory/file List is mandatory; this help document is displayed 
-        without it.  Unix command line wildcards are supported. Use './' or '*'
-        for all directories and files in the current directory to be considered.
-        
+      - Directory/File List is mandatory; usage is displayed without it.
+          Shell wildcards are supported.  Use './' or '*' to process everything
+          in the current directory.
 
-  This utility program can be executed anywhere. No Mode is changed if neither
-  directory nor file are owned by user 'rdadata'.
-  
-  For examples, to change owner for directories and files under ds277.6, you can
-     
-     1. Change into the dataset home data directory as 'cd /PathTo/ds277.6' and
-        execute 'rdaown ./'; add recursive option '-r' to change owner for directories
-        and files further into the sub-directories, or change directory into
-        a sub-directory to change owner for files inside of it.
-     
-     2. Pass an absolute path to rdaown as 'rdaown /PathTo/ds277.6/';
-        without the ending by '/', owner of top directory itself is
-        changed only unless the recursive option '-r' or '-R RecursiveLevel'
-        is present.
-     
-     3. If the current directory is in another dataset home data directory,
-        such as /PathTo/ds277.7, you can pass a relative path to rdaown
-        as  'rdaown ../ds277.6/' or as 'rdaown ../ds277.6/*'
+  This utility can be run from any directory.  No ownership is changed if all
+  matched items are already owned by 'rdadata' or if none of their current owners
+  are registered DECS specialists.
+
+  Examples:
+
+    1. Change into the dataset home directory and change ownership of all
+       immediate contents:
+
+          cd /PathTo/ds277.6
+          rdaown ./
+
+       Add -r to recurse into sub-directories:
+
+          rdaown -r ./
+
+    2. Pass an absolute path with a trailing '/' to process the directory's
+       contents (the directory entry itself is not changed):
+
+          rdaown /PathTo/ds277.6/
+
+       Without the trailing '/', the directory entry itself is also changed
+       unless -r or -R is given:
+
+          rdaown /PathTo/ds277.6
+
+    3. Use a relative path from a neighbouring directory:
+
+          rdaown ../ds277.6/
+          rdaown ../ds277.6/*
+
+    4. Change ownership of files only, recursively:
+
+          rdaown -f -r /PathTo/ds277.6/

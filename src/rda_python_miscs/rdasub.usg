@@ -1,12 +1,49 @@
 
- To submit a nohup background execution job on a Linux machine.
- 
- Usage: rdasub [-env EnvironmentPairs] [-cwd WorkDir] -cmd Command [cmd-options]
+ Submit a command as a nohup background process on the local machine.  The
+ command is launched with 'nohup ... > /dev/null 2>&1 &' so it continues
+ running after the shell exits and all output is discarded.  The PID of the
+ submitted job is logged once the process is detected.
 
-      - Option -cwd, set the working directory a Command to be executed;
- 
-      - Option -cmd, mandatory option to lead a Command to be executed;
+ Usage: rdasub [-cwd WorkDir] [-env EnvironmentPairs] [-b] -cmd Command [cmd-options]
 
-      - Option -env, set environment name/value pairs separated by ',';
+      - Option -cmd, (mandatory) command to run in the background.  Must be an
+          executable reachable via PATH or given as an absolute path.  All
+          arguments after -cmd are passed directly to the command;
 
-      - cmd-options, specifies options that can be passed to the Command.
+      - Option -cwd, working directory for the command.  The process changes
+          into this directory before launching.  Environment variables in the
+          path (e.g. $HOME) are expanded automatically.  Defaults to the
+          current directory if not specified;
+
+      - Option -env, environment variable name/value pairs to set before the
+          command runs, separated by ',', e.g. -env KEY1=val1,KEY2=val2;
+
+      - Option -b, submit rdasub itself to the background first, then launch
+          the command;
+
+      - cmd-options, any options and arguments to pass to the command.  Place
+          them after the -cmd value on the command line.
+
+  Usage is displayed if no arguments are provided.
+
+  Examples:
+
+    1. Run a script in the background from the current directory:
+
+          rdasub -cmd /path/to/myscript.sh
+
+    2. Run a command with arguments in the background:
+
+          rdasub -cmd dsrqst d277006 SP -RI 750748 -b -d
+
+    3. Run a command in a specific working directory:
+
+          rdasub -cwd /glade/work/zji/jobs -cmd ./process.sh -input data.nc
+
+    4. Run a command with environment variables set:
+
+          rdasub -env LANG=en_US,TZ=UTC -cmd /path/to/myscript.sh
+
+    5. Run a Python module entry point in the background:
+
+          rdasub -cwd /glade/work/zji -cmd python myscript.py --config cfg.yaml

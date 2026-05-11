@@ -1,0 +1,75 @@
+
+ Wrapper around wget to download one or more remote files identified by a root
+ name pattern (wildcard), then combine the downloaded parts into a single local
+ output file.  The download is skipped if the local output file already exists
+ and is up-to-date, unless Option -CN is given.
+
+ Usage: pgwget -UL WebURL -RN RootFileName [-EX Extension] [-FN FileName]   \
+               [-FC FileCount] [-MC MinFileCount] [-JC JoinCommand]          \
+               [-CN] [-CR] [-SM] [-OP WgetOptions] [-b]
+
+      - Option -UL, (required) base URL including the directory path where
+          the remote files reside, e.g. https://server.example.org/data/path/;
+
+      - Option -RN, (required) root portion of the remote file name. A wildcard
+          '*' is appended automatically when searching for matching files,
+          e.g. -RN mydata_20240101 matches mydata_20240101.part1, etc.;
+
+      - Option -EX, file name extension appended to -RN when building the
+          wildcard pattern, e.g. -RN mydata -EX nc matches mydata*.nc;
+
+      - Option -FN, local output file name written after a successful download.
+          Defaults to RootFileName if -EX is not given, or RootFileName.Extension
+          if -EX is provided;
+
+      - Option -FC, expected total number of matching remote files for the
+          download to be considered complete; defaults to 1;
+
+      - Option -MC, minimum number of matching files required before combining.
+          Defaults to the -FC value when not specified;
+
+      - Option -JC, strategy for combining multiple downloaded part-files into
+          the single output file. Must be one of:
+            cat   - concatenate files in sorted order (default)
+            tar   - build a tar archive (create with first file, update with rest)
+            first - use only the first file in sorted order; discard the rest
+            last  - use only the last file in sorted order; discard the rest
+
+      - Option -CN, check for a newer remote file even when the local output
+          file already exists. Forces a fresh wget and rebuilds the output if
+          any downloaded part is newer than the existing local file;
+
+      - Option -CR, remove the intermediate downloaded part-files after they
+          have been combined into the output file;
+
+      - Option -SM, show wget progress and diagnostic output. By default wget
+          runs in quiet mode (-q) and no download messages are printed;
+
+      - Option -OP, override the default wget options string. The default is:
+            -np -nH -nd -m -e robots=off --no-check-certificate
+
+      - Option -b, run the download in the background;
+
+ Examples:
+
+   1. Download a single file whose name is exactly known:
+
+         pgwget -UL https://server.example.org/data/ -RN myfile.nc
+
+      This runs wget looking for 'myfile.nc*' on the server and saves the
+      result as myfile.nc locally.
+
+   2. Download a file that may arrive as numbered parts (.part1, .part2, ...),
+      concatenate them, and remove the parts when done:
+
+         pgwget -UL https://server.example.org/data/ -RN mydata_20240101  \
+                -FC 3 -JC cat -CR
+
+   3. Download split files with a known extension, using a custom output name:
+
+         pgwget -UL https://server.example.org/data/ -RN obs_2024 -EX nc  \
+                -FN observations_2024.nc -FC 2 -CR
+
+   4. Check whether a newer version of an already-downloaded file is available:
+
+         pgwget -UL https://server.example.org/data/ -RN myfile.nc -CN

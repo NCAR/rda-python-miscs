@@ -15,12 +15,19 @@ from os import path as op
 from rda_python_common.pg_file import PgFile
 
 class RdaCp(PgFile):
+   """Copy files and directories locally or between remote hosts via 'rdadata'.
+
+   Supports local-to-local, local-to-remote, remote-to-local, and Object Store /
+   Globus transfers.  Target files are owned by 'rdadata' and created with
+   configurable permission modes.  Recursive copying is controlled by -r / -R.
+   """
 
    def __init__(self):
+      """Initialize RdaCp with default copy options and runtime state."""
       super().__init__()
       self.RDACP = {
          'fh': None,   # from host name, default to localhost
-         'th': None,   # to host name, defaul to localhost
+         'th': None,   # to host name, default to localhost
          'fb': None,   # from bucket name for a from file in Object Store
          'tb': None,   # to bucket name for a to file in Object Store
          'fp': None,   # from Globus endpoint
@@ -46,6 +53,13 @@ class RdaCp(PgFile):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into RDACP options and validate inputs.
+
+      The default option is -f (source paths); positional arguments before any
+      explicit option flag are treated as source paths.  -r is a boolean flag;
+      -R and -F/-D take integer values.  Displays usage and exits if -h is given
+      or no source files are specified.
+      """
       dohelp = 0
       argv = sys.argv[1:]
       self.set_suid(self.PGLOG['EUID'])
@@ -72,7 +86,7 @@ class RdaCp(PgFile):
          else:
             if option == 'R':
                self.RDACP[option] = int(arg)
-            elif 'FD'.find(option) > -1:
+            elif option in 'FD':
                self.RDACP[option] = self.base2int(arg, 8)
             else:
                self.RDACP[option] = arg
@@ -85,6 +99,12 @@ class RdaCp(PgFile):
    
    # function to start actions
    def start_actions(self):
+      """Validate copy targets, configure host/bucket/endpoint context, and dispatch copies.
+
+      Resolves the target path, sets file and directory permission modes, checks
+      for invalid same-host copies, activates Object Store bucket or Globus endpoint
+      when specified, then calls copy_top_list.  Logs a summary count on completion.
+      """
       self.dssdb_dbname()
       self.validate_decs_group('rdacp', self.PGLOG['CURUID'], 1)
       if not self.RDACP['R'] and self.RDACP['r']: self.RDACP['R'] = 1000
@@ -117,13 +137,23 @@ class RdaCp(PgFile):
       if self.RDACP['fh']: hinfo += " From " + self.RDACP['fh']
       if self.RDACP['th']: hinfo += " To " + self.RDACP['th']
       if self.CINFO['tcnt'] > 1:
-         self.pglog("Total {} {} copiled{}".format(self.CINFO['tcnt'], self.CINFO['cpstr'][self.CINFO['cpflag']], hinfo), self.LOGWRN)
+         self.pglog("Total {} {} copied{}".format(self.CINFO['tcnt'], self.CINFO['cpstr'][self.CINFO['cpflag']], hinfo), self.LOGWRN)
       elif self.CINFO['tcnt'] == 0 and not self.RDACP['fh']:
          self.pglog("{}: No File copied{}".format((self.CINFO['fpath'] if self.CINFO['fpath'] else self.CINFO['curdir']), hinfo), self.LOGWRN)
       self.cmdlog()
    
-   # display the top level list
+   # copy the top level list
    def copy_top_list(self, files):
+      """Iterate the top-level source paths and initiate copies or recursive traversal.
+
+      For each source path, checks existence via the appropriate method (Globus or
+      GDEX).  A directory path ending with '/' copies its contents rather than the
+      directory entry itself.  Directories without -r/-R cause an error unless the
+      trailing '/' form is used.
+
+      Args:
+         files (list[str]): Source paths from the -f option.
+      """
       for file in files:
          if self.RDACP['th'] and not self.pgcmp(self.RDACP['th'], self.PGLOG['BACKUPNM'], 1):
             info = self.check_globus_file(file, 'gdex-glade', 0, self.LGWNEX)
@@ -154,6 +184,16 @@ class RdaCp(PgFile):
    
    # recursively copy directory/file
    def copy_list(self, tlist, level, cdir):
+      """Recursively copy a directory listing up to the configured depth limit.
+
+      Logs a sub-count message when two or more files are copied from a single
+      directory.  Accumulates the total copy count in CINFO['tcnt'].
+
+      Args:
+         tlist (dict): Mapping of path → file-info dict from gdex_glob.
+         level (int): Current recursion depth (1-based); stops when >= RDACP['R'].
+         cdir (str): Path of the current directory being processed (for log messages).
+      """
       fcnt = 0
       for file in tlist:
          if tlist[file]['isfile']:
@@ -166,8 +206,20 @@ class RdaCp(PgFile):
          self.pglog("{}{}: {} {} copied from directory".format(self.CINFO['fhost'], cdir, fcnt, self.CINFO['cpstr'][self.CINFO['cpflag']]), self.LOGWRN)
       self.CINFO['tcnt'] += fcnt
    
-   # copy one file each time
+   # copy one file
    def copy_file(self, fromfile, isfile):
+      """Resolve the destination path for one source file and perform the copy.
+
+      When a target directory is set (tpath), strips the source base path prefix
+      and joins the remainder to tpath.  Otherwise copies directly to the -t value.
+
+      Args:
+         fromfile (str): Absolute source file path.
+         isfile (int): Non-zero when the source is a regular file (vs. a symlink type).
+
+      Returns:
+         int: 1 if the file was copied successfully, 0 otherwise.
+      """
       if self.CINFO['tpath']:
          fname = re.sub(r'^{}'.format(self.CINFO['fpath']), '', fromfile)
          if isfile:
@@ -178,8 +230,9 @@ class RdaCp(PgFile):
          tofile = self.RDACP['t']
       return (1 if self.copy_gdex_file(tofile, fromfile, self.RDACP['th'], self.RDACP['fh'], self.LGWNEX) else 0)
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaCp, parse arguments, run, and exit."""
    object = RdaCp()
    object.read_parameters()
    object.start_actions()

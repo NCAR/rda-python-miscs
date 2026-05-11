@@ -10,9 +10,9 @@
             -o LOGPATH/gdexqsub/
             -e LOGPATH/gdexqsub/
             -A P43713000
-            -m a
-            -q gdex
-            -l walltime=6:00:00,select=1:node=1:mem=1gb
+            -m n
+            -q gdex@casper-pbs
+            -l walltime=6:00:00,select=1:ncpus=1:mem=1gb
 
       - Option -cwd, set the working directory for the Command to be executed. If
           it is not specified, it defaults to the current directory where qsub
@@ -30,21 +30,21 @@
 
       - cmd-options, specifies options that can be passed to the Command.
 
-A tash script example:
+A tcsh script example:
 #!/bin/tcsh
 
-#PBS -o /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
-#PBS -e /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
+#PBS -o /glade/u/home/gdexdata/dssdb/log/gdexqsub/
+#PBS -e /glade/u/home/gdexdata/dssdb/log/gdexqsub/
 #PBS -A P43713000
 #PBS -q gdex@casper-pbs
-#PBS -m a
+#PBS -m n
 #PBS -N dsrqst
 #PBS -l walltime=12:00:00
 #PBS -l select=1:mem=20gb
-setenv HOME /gpfs/u/home/davestep
+setenv HOME /glade/u/home/davestep
 source /etc/profile.d/z00_modules.csh
 source /glade/u/apps/opt/conda/etc/profile.d/conda.csh
-source /gpfs/u/home/davestep/.tcshrc
+source /glade/u/home/davestep/.tcshrc
 pwd; hostname; date
 
 module load ncarenv

@@ -18,8 +18,16 @@ from os import path as op
 from rda_python_common.pg_split import PgSplit
 
 class GdexLs(PgSplit):
+   """List local files/directories and display matching metadata from GDEXDB.
+
+   For each path, queries the GDEX database for dataset, group, or file records
+   and prints them in aligned columns: type-prefixed name, size, file count (or
+   format), and description.  A leading letter on each output line indicates the
+   item type: 'D' for a dataset root, 'G' for a sub-group, 'F' for a data file.
+   """
 
    def __init__(self):
+      """Initialize display constants, CLI option flags, and listing state."""
       super().__init__()
       # define some constants for gdexls actions
       self.DIDX = 3   # description column index
@@ -49,6 +57,13 @@ class GdexLs(PgSplit):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into GDEXLS option flags and the file/directory list.
+
+      Recognises boolean flags -d, -f, -N, -r and value options -R, -D.
+      Positional arguments are resolved to real paths and appended to LINFO['files'].
+      Exits with usage if -h/--help/? is given; errors on unknown options or
+      values without a preceding option.
+      """
       self.set_help_path(__file__)
       self.PGLOG['LOGFILE'] = "gdexls.log"   # set different log file
       self.LINFO['curdir'] = self.get_real_path(os.getcwd())
@@ -61,7 +76,7 @@ class GdexLs(PgSplit):
          if ms:
             option = ms.group(1)
             if option not in self.GDEXLS: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if 'dfNr'.find(option) > -1:
+            if option in 'dfNr':
                self.GDEXLS[option] = 1
                option = defopt
             continue
@@ -76,8 +91,15 @@ class GdexLs(PgSplit):
                self.GDEXLS[option] = arg
             option = defopt
 
-   # functio to start actions
-   def start_actions(self):   
+   # function to start actions
+   def start_actions(self):
+      """Fetch DB connection info, resolve the default file list, and drive display.
+
+      If no paths were given, lists all entries in the current directory.
+      Defaults both -d and -f flags when neither is explicitly set.
+      Prints a summary count of datasets, groups, and files at the end,
+      or exits with an error if nothing matched in the database.
+      """
       self.view_dbinfo()
       if not self.LINFO['files']:
          self.LINFO['files'] = sorted(glob.glob('*'))   # view all files in current directory
@@ -112,6 +134,15 @@ class GdexLs(PgSplit):
 
    # display the top level list
    def display_top_list(self, files):
+      """Process and display each top-level path, expanding directories as needed.
+
+      A path ending with '/' suppresses display of the directory entry itself and
+      always recurses into it.  Paths not starting with '/' are joined to curdir.
+      Flushes the cached formatted list when it exceeds CLMT entries.
+
+      Args:
+         files (list[str]): Top-level paths provided on the command line (or cwd glob).
+      """
       for file in files:
          if not op.exists(file):
             sys.stderr.write(file + ": NOT exists\n")
@@ -131,6 +162,14 @@ class GdexLs(PgSplit):
 
    # recursively display directory/file info
    def display_list(self, files, level):
+      """Recursively display metadata for each path up to the configured depth limit.
+
+      Flushes the formatted cache when it exceeds CLMT entries to keep memory bounded.
+
+      Args:
+         files (list[str]): Glob-expanded paths at the current recursion level.
+         level (int): Current recursion depth (1-based); stops when >= GDEXLS['R'].
+      """
       for file in files:
          isdir = 1 if op.isdir(file) else 0
          self.display_line(file, isdir)
@@ -141,6 +180,17 @@ class GdexLs(PgSplit):
 
    # find dataset/group info; display or cache file
    def display_line(self, file, isdir):
+      """Look up GDEX metadata for a path and pass a formatted record to display_record.
+
+      Resolves the dataset ID and home path on first call, then reuses cached values
+      for subsequent paths under the same dataset.  Skips paths with no matching
+      dataset ID.  Dispatches to the dataset, group, or file branch based on whether
+      the path is the dataset root, a subdirectory, or a regular file.
+
+      Args:
+         file (str): Absolute path to the file or directory.
+         isdir (int): 1 if the path is a directory, 0 otherwise.
+      """
       getwfile = 1
       if self.LINFO['dsid'] and self.LINFO['dhome']:
          ms = re.match(r'^{}/(.*)$'.format(self.LINFO['dhome']), file)
@@ -151,7 +201,7 @@ class GdexLs(PgSplit):
          self.LINFO['dsid'] = self.find_dataset_id(file)
          if self.LINFO['dsid'] is None: return     # skip for missing dsid
          pgrec = self.pgget("dataset", "title, (dwebcnt + nwebcnt) nc, (dweb_size + nweb_size) ns", "dsid = '{}'".format(self.LINFO['dsid']), self.LGEREX)
-         if not pgrec: return None
+         if not pgrec: return
          self.LINFO['dhome'] = "{}/{}".format(self.PGLOG['DSDHOME'], self.LINFO['dsid'])
          if self.LINFO['dhome'] == file:
             file = re.sub(r'^{}'.format(self.LINFO['tpath']), '', file, 1)
@@ -183,8 +233,17 @@ class GdexLs(PgSplit):
             self.display_record(["F" + file, pgrec['data_size'], pgrec['data_format'], note])
             self.LINFO['fcnt'] += 1
 
-   # display one file info
+   # display one record
    def display_record(self, disp):
+      """Format the size field and either print immediately or cache for aligned output.
+
+      In unformatted mode (-N) the columns are joined by the delimiter and printed
+      directly.  Otherwise the record is appended to pgrecs and the per-column
+      maximum widths are updated for later aligned rendering by display_format_list.
+
+      Args:
+         disp (list[str]): Four-element list: [name, size, count/format, description].
+      """
       disp[1] = self.get_float_string(disp[1])
       if self.GDEXLS['N']:
          print(self.GDEXLS['D'].join(disp))
@@ -197,6 +256,12 @@ class GdexLs(PgSplit):
 
    # display cached list with format
    def display_format_list(self):
+      """Flush the cached record list with column-aligned formatting and reset the cache.
+
+      Applies left or right alignment to each of the first DIDX columns based on
+      ALIGNS, padding to the maximum observed width, then joins with the delimiter.
+      Resets pcnt to 0 after printing (pgrecs entries are left but ignored).
+      """
       for j in range(self.LINFO['pcnt']):
          disp = self.LINFO['pgrecs'][j]
          for i in range(self.DIDX):
@@ -207,9 +272,20 @@ class GdexLs(PgSplit):
          print(self.GDEXLS['D'].join(disp))
       self.LINFO['pcnt'] = 0
 
-   # change size to floating point value with unit
+   # convert size to floating point value with unit
    @staticmethod
    def get_float_string(val):
+      """Convert a numeric byte count to a human-readable string with a unit suffix.
+
+      Divides by 1000 repeatedly until the value is <= 1000 or the largest unit
+      (Petabytes) is reached.  Values >= 1K are formatted to two decimal places.
+
+      Args:
+         val (int|float): Size in bytes.
+
+      Returns:
+         str: Formatted string such as '1.50M' or '512B'.
+      """
       units = ['B', 'K', 'M', 'G', 'T', 'P']
       idx = 0
       while val > 1000 and idx < 5:
@@ -220,17 +296,32 @@ class GdexLs(PgSplit):
       else:
          return "{}{}".format(val, units[idx])
 
-   # replace /gpfs to the path /glade
+   # normalize /gpfs paths to /glade equivalents and resolve symlinks
    @staticmethod
    def get_real_path(path):
+      """Translate legacy /gpfs mount-point prefixes to their /glade equivalents.
+
+      Handles two mappings:
+        - /gpfs/u/...       → /glade/...
+        - /gpfs/csfs1/...   → /glade/campaign/...
+
+      Then calls os.path.realpath to resolve any symlinks.
+
+      Args:
+         path (str): Filesystem path, possibly using a /gpfs prefix.
+
+      Returns:
+         str: Canonicalized absolute path under the /glade hierarchy.
+      """
       if re.match(r'^/gpfs/u', path):
          path = re.sub(r'^/gpfs', '/glade', path, 1)
       elif re.match(r'^/gpfs/csfs1/', path):
          path = re.sub(r'^/gpfs/csfs1', '/glade/campaign', path, 1)
       return op.realpath(path)
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate GdexLs, parse arguments, run, and exit."""
    object = GdexLs()
    object.read_parameters()
    object.start_actions()

@@ -5,7 +5,7 @@
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
-#   Purpose: change file/directory ownership to 'rdadata' in given one or mutilple
+#   Purpose: change file/directory ownership to 'rdadata' in given one or multiple
 #            local directories that are owned by decs specialists. it needs
 #            super user privilege to execute. 
 #    Github: https://github.com/NCAR/rda-python-miscs.git
@@ -18,8 +18,15 @@ from os import path as op
 from rda_python_common.pg_file import PgFile
 
 class RdaOwn(PgFile):
+   """Change file and directory ownership to 'rdadata' for a given path list.
+
+   Must be run as root.  Only items currently owned by DECS specialists are
+   changed; items already owned by 'rdadata' are silently skipped.  A leading
+   letter ('D' or 'F') is logged with each changed path to indicate its type.
+   """
 
    def __init__(self):
+      """Initialize RdaOwn with default ownership-change options and runtime state."""
       super().__init__()
       self.RDAOWN = {
          'd': 0,     # 1 to change directory owner
@@ -38,8 +45,15 @@ class RdaOwn(PgFile):
          'fcnt': 0
       }
 
-   # function to read paramters
+   # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into RDAOWN option flags and the file/directory list.
+
+      Recognises boolean flags -d, -f, -h, -r and value option -R.  Positional
+      arguments are collected into OINFO['files'].  Exits with usage if -h is
+      given or no files are specified.  Requires the effective user to be root.
+      Defaults both -d and -f when neither is explicitly set.
+      """
       argv = sys.argv[1:]
       self.set_help_path(__file__)
       self.PGLOG['LOGFILE'] = "rdaown.log"   # set different log file
@@ -50,7 +64,7 @@ class RdaOwn(PgFile):
          if ms:
             option = ms.group(1)
             if option not in self.RDAOWN: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if 'dfhr'.find(option) > -1:
+            if option in 'dfhr':
                self.RDAOWN[option] = 1
                option = defopt
             continue
@@ -70,6 +84,7 @@ class RdaOwn(PgFile):
    
    # function to start actions
    def start_actions(self):
+      """Connect to the database, process the path list, and log a summary count."""
       self.dssdb_scname()
       self.change_top_list(self.OINFO['files'])
       if (self.OINFO['dcnt'] + self.OINFO['fcnt']) > 1:
@@ -88,6 +103,15 @@ class RdaOwn(PgFile):
    
    # change owner for the top level list
    def change_top_list(self, files):
+      """Iterate top-level paths and change ownership, expanding directories as needed.
+
+      A directory path ending with '/' changes ownership of its contents rather
+      than the directory entry itself.  Relative paths are resolved against curdir.
+      Recurses into directories when -R is set or when the trailing '/' form is used.
+
+      Args:
+         files (list[str]): Source paths from the command line.
+      """
       for file in files:
          info = self.check_local_file(file, 2, self.LOGWRN)
          if not info:
@@ -106,6 +130,15 @@ class RdaOwn(PgFile):
    
    # recursively change directory/file owner
    def change_list(self, files, level, cdir):
+      """Recursively change ownership for a directory listing up to the depth limit.
+
+      Logs a sub-count when two or more files are changed in a single directory.
+
+      Args:
+         files (list[str]): Glob-expanded paths at the current recursion level.
+         level (int): Current recursion depth (1-based); stops when >= RDAOWN['R'].
+         cdir (str): Path of the current directory (for log messages).
+      """
       fcnt = 0
       for file in files:
          info = self.check_local_file(file, 2, self.LOGWRN)
@@ -114,11 +147,26 @@ class RdaOwn(PgFile):
          if not info['isfile'] and level < self.RDAOWN['R']:
             fs = glob.glob(file + "/*")
             self.change_list(fs, level+1, file)
-      if fcnt > 1:  # display sub count if two more files are changed mode
+      if fcnt > 1:  # display sub count if two or more files changed owner
          self.pglog("{}: {} Files changed owner in the directory".format(cdir, fcnt), self.LOGWRN)
    
-   # change owner for a single directory/file
+   # change owner for a single file or directory
    def change_owner(self, file, info):
+      """Change ownership of one file or directory to 'rdadata' using chown.
+
+      Skips the item if it is already owned by 'rdadata' or if the current owner
+      is not a registered DECS specialist in the dssgrp table.  Logs the result
+      as 'owner => rdadata' on success or an error message on failure.  Updates
+      OINFO['fcnt'] for files and OINFO['dcnt'] for directories on success.
+
+      Args:
+         file (str): Absolute path to the file or directory.
+         info (dict): File metadata dict from check_local_file (includes 'isfile',
+                      'logname').
+
+      Returns:
+         int: 1 if a file was successfully changed, 0 otherwise.
+      """
       fname = re.sub(r'^{}'.format(self.OINFO['tpath']), '', file, 1)
       if info['isfile']:
          if not self.RDAOWN['f']: return 0
@@ -139,8 +187,9 @@ class RdaOwn(PgFile):
             return 0
       return self.pglog("{}: Error change owner {} to rdadata".format(fname, info['logname']), self.LOGERR)
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaOwn, parse arguments, run, and exit."""
    object = RdaOwn()
    object.read_parameters()
    object.start_actions()

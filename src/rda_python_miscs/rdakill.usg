@@ -1,36 +1,66 @@
 
- Kill one of multiple processes and theirs children for given local process ID or
- other process information; kill one or multiple PBS batch jobs for give batch
- Job ID or Status. For killing PBS batch jobs, you must login to casper
- login nodes.
- 
+ Kill one or more local processes and their children for a given process ID or
+ other filter criteria; or cancel one or more PBS batch jobs by job ID or by
+ job status.  For PBS operations the -h option must specify the PBS node name.
+
  Usage: rdakill [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
-                [-s BatchStatus] [-u ProcessOwner] [-a ApplicationName]
+                [-s BatchStatus] [-q BatchQueue] [-r]               \
+                [-u ProcessOwner] [-a ApplicationName]
 
-      - Option -a, application name of the process;
+      - Option -a, filter by application (command) name.  For local processes,
+          any process whose command field contains this string is matched.
+          Can be combined with -p, -P, or -u;
 
-      - Option -h, hostname the process is on. Omit it for local process,
-        but it is mandatory if the process id is a PBS bactch id.
- 
-      - Option -p, the process id or batch job id to be stopped.
- 
-      - Option -P, the parent process id;
- 
-      - Option -q, the PBS queue name. It defaults to 'rda';
+      - Option -h, hostname where the process is running.  Omit for local
+          processes.  Set to the PBS node name (e.g. casper-pbs) to cancel
+          PBS batch jobs;
 
-      - Option -s, the Batch Job Status; this is mantatory if batch id is not provided;
+      - Option -p, local process ID (PID) or PBS batch job ID to kill.
+          A bare integer argument without a leading flag is also accepted
+          as a process ID;
 
-      - Option -u, use login name for the process owner. It defaults to 'all' for
-        all user login names.
+      - Option -P, kill the local process with this parent process ID (PPID),
+          along with all of its children;
 
-  This help document is displayed if rdakill is executed without option.
-  
-  For examples, to kill a process of a dsrqst process with pid 13199 locally,
-     
-     rdakill -p 13199 -a dsrqst
- 
-  The child processes under the dsrqst process, if any, are also terminated. To kill
-  a PBS bactch process with a bid = 334323,
-     
-     rdakill -h PBS -p 334323
- 
+      - Option -q, PBS queue name to search when killing by status (-s).
+          Defaults to 'gdex';
+
+      - Option -r, reserved flag for exclusive kill; currently works only with
+          -s PEND to target pending-only batch jobs;
+
+      - Option -s, PBS batch job status to match when killing by status rather
+          than by job ID.  Mandatory when -p is not given for PBS operations.
+          Common values: RUN, PEND;
+
+      - Option -u, limit kills to processes owned by this login name.
+          Without this option all users are included;
+
+  For local processes, all child processes are also terminated recursively.
+  Usage is displayed if rdakill is run without any options or arguments.
+
+  Examples:
+
+    1. Kill a local process by PID:
+
+          rdakill -p 13199
+          rdakill 13199
+
+    2. Kill a local process by PID and verify it matches a specific application:
+
+          rdakill -p 13199 -a dsrqst
+
+    3. Kill all local processes (and their children) owned by a user:
+
+          rdakill -u zji -a dsrqst
+
+    4. Kill a PBS batch job by job ID:
+
+          rdakill -h casper-pbs -p 334323
+
+    5. Kill all running PBS batch jobs for a user in the default queue:
+
+          rdakill -h casper-pbs -s RUN -u zji
+
+    6. Kill all pending PBS batch jobs in a specific queue:
+
+          rdakill -h casper-pbs -s PEND -q gdex

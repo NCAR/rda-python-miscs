@@ -5,7 +5,7 @@
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
-#   Purpose: change file/directory modes in given one or mutilple local directories
+#   Purpose: change file/directory modes in given one or multiple local directories
 #            owned by 'rdadata'
 #    Github: https://github.com/NCAR/rda-python-miscs.git
 ##################################################################################
@@ -16,8 +16,16 @@ from os import path as op
 from rda_python_common.pg_file import PgFile
 
 class RdaMod(PgFile):
+   """Change file and directory permission modes for paths owned by 'rdadata'.
+
+   Only items owned by 'rdadata' are changed; items with a different owner are
+   logged as errors.  Items already at the target mode are silently skipped.
+   A leading letter ('D' or 'F') is logged with each changed path to indicate
+   its type.
+   """
 
    def __init__(self):
+      """Initialize RdaMod with default mode-change options and runtime state."""
       super().__init__()
       self.RDAMOD = {
          'd': 0,     # 1 to change directory mode
@@ -25,8 +33,8 @@ class RdaMod(PgFile):
          'h': 0,     # 1 to show help message
          'r': 0,     # 1 if recursive all
          'R': 0,     # > 0 to set recursive limit
-         'F': 0o664,   # to chnage file mode, default to 664
-         'D': 0o775,   # to chnge directory mode, default to 775
+         'F': 0o664,   # target file mode, default to 664
+         'D': 0o775,   # target directory mode, default to 775
       }
       self.MINFO = {
          'files': [],
@@ -38,6 +46,13 @@ class RdaMod(PgFile):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into RDAMOD option flags and the file/directory list.
+
+      Recognises boolean flags -d, -f, -h, -r and value options -R, -F, -D.
+      -R is cast to int; -F and -D are parsed as octal integers.  Positional
+      arguments are collected into MINFO['files'].  Exits with usage if -h is
+      given or no files are specified.
+      """
       self.set_suid(self.PGLOG['EUID'])
       self.set_help_path(__file__)
       self.PGLOG['LOGFILE'] = "rdamod.log"   # set different log file
@@ -49,7 +64,7 @@ class RdaMod(PgFile):
          if ms:
             option = ms.group(1)
             if option not in self.RDAMOD: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if 'dfhr'.find(option) > -1:
+            if option in 'dfhr':
                self.RDAMOD[option] = 1
                option = defopt
             continue
@@ -60,7 +75,7 @@ class RdaMod(PgFile):
          else:
             if option == 'R':
                self.RDAMOD[option] = int(arg)
-            elif 'FD'.find(option) > -1:
+            elif option in 'FD':
                self.RDAMOD[option] = self.base2int(arg, 8)
             else:
                self.RDAMOD[option] = arg
@@ -69,6 +84,7 @@ class RdaMod(PgFile):
 
    # function to start actions
    def start_actions(self):
+      """Validate DECS group membership, process the path list, and log a summary count."""
       self.dssdb_dbname()
       if not (self.RDAMOD['d'] or self.RDAMOD['f']):
          self.RDAMOD['d'] = self.RDAMOD['f'] = 1   # both directories and files as default
@@ -78,7 +94,7 @@ class RdaMod(PgFile):
       if (self.MINFO['dcnt'] + self.MINFO['fcnt']) > 1:
          msg = ''
          if self.MINFO['dcnt'] > 0:
-            s = ('ies' if self.MINFO['dcnt'] else 'y')
+            s = ('ies' if self.MINFO['dcnt'] > 1 else 'y')
             msg = "{} Director{}".format(self.MINFO['dcnt'], s) 
          if self.MINFO['fcnt'] > 0:
             s = ('s' if self.MINFO['fcnt'] > 1 else '')
@@ -91,6 +107,15 @@ class RdaMod(PgFile):
 
    # change mode for the top level list
    def change_top_list(self, files):
+      """Iterate top-level paths and change modes, expanding directories as needed.
+
+      A directory path ending with '/' changes the mode of its contents rather
+      than the directory entry itself.  Relative paths are resolved against curdir.
+      Recurses into directories when -R is set or when the trailing '/' form is used.
+
+      Args:
+         files (list[str]): Source paths from the command line.
+      """
       for file in files:
          info = self.check_local_file(file, 6, self.LOGWRN)
          if not info:
@@ -109,6 +134,16 @@ class RdaMod(PgFile):
 
    # recursively change directory/file mode
    def change_list(self, files, level, cdir):
+      """Recursively change modes for a directory listing up to the depth limit.
+
+      Logs a sub-count when two or more files have their mode changed in a
+      single directory.
+
+      Args:
+         files (dict): Mapping of path → file-info dict from local_glob.
+         level (int): Current recursion depth (1-based); stops when >= RDAMOD['R'].
+         cdir (str): Path of the current directory (for log messages).
+      """
       fcnt = 0
       for file in files:
          info = files[file]
@@ -116,14 +151,29 @@ class RdaMod(PgFile):
          if not info['isfile'] and level < self.RDAMOD['R']:
             fs = self.local_glob(file, 6, self.LOGWRN)
             self.change_list(fs, level+1, file)
-      if fcnt > 1:  # display sub count if two more files are changed mode
+      if fcnt > 1:  # display sub count if two or more files changed mode
          self.pglog("{}: {} Files changed Mode".format(cdir, fcnt), self.LOGWRN)
 
-   # change mode of a single directory/file
+   # change mode of a single file or directory
    def change_mode(self, file, info):
+      """Change the permission mode of one file or directory.
+
+      Skips the item if the -f/-d flag for its type is not set, if it is not
+      owned by 'rdadata', or if its current mode already matches the target.
+      Logs the old-to-new mode transition on success or an error on owner mismatch.
+      Updates MINFO['fcnt'] for files and MINFO['dcnt'] for directories on success.
+
+      Args:
+         file (str): Absolute path to the file or directory.
+         info (dict): File metadata dict from local_glob/check_local_file
+                      (includes 'isfile', 'logname', 'mode').
+
+      Returns:
+         int: 1 if a file mode was successfully changed, 0 otherwise.
+      """
       fname = re.sub(r'^{}'.format(self.MINFO['tpath']), '', file, 1)
       if info['isfile']:
-         if not self.RDAMOD['d']: return 0
+         if not self.RDAMOD['f']: return 0
          fname = "F" + fname
          mode = self.RDAMOD['F']
       else:
@@ -141,8 +191,9 @@ class RdaMod(PgFile):
             self.MINFO['dcnt'] += 1
             return 0
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaMod, parse arguments, run, and exit."""
    object = RdaMod()
    object.read_parameters()
    object.start_actions()

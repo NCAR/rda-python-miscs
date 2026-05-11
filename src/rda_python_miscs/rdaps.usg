@@ -1,29 +1,55 @@
 
- List matching process information for local or batch processes if they are running.
-  
+ Show process status for local or PBS batch processes.  Results can be filtered
+ by process ID, parent process ID, process owner, or application name.  Without
+ a hostname, 'ps' is run on the local machine.  When the hostname matches the
+ PBS node name, 'qstat' is used instead.
+
  Usage: rdaps [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
-              [-u ProcessOnwer] [-a ApplicationName]
+              [-u ProcessOwner] [-a ApplicationName]
 
-      - Option -a, application name of the process;
+      - Option -a, filter results by application (command) name.  For local
+          processes, any line whose command field contains this string is shown.
+          For PBS jobs, only jobs whose job name matches exactly are shown;
 
-      - Option -h, hostname the process is on; omit it for local process,
-        but it is mandatory if the process id is a PBS bactch id.
+      - Option -h, hostname where the process is running.  Omit for local
+          processes.  Use the PBS node name (e.g. the value of PBSNAME) to
+          query PBS batch jobs via qstat instead of ps;
 
-      - Option -p, the local process or batch job id to be checked;
+      - Option -p, process ID (PID) for a local process, or job ID for a PBS
+          batch job.  A bare integer argument without a leading flag is also
+          accepted as a process ID;
 
-      - Option -P, the parent process id on the local machine;
- 
-       - Option -u, use login name for the process owner. It defaults to 'all' for
-        all user login names.
- 
-  This utility program can be executed on selected machines. This help document
-  is displayed if no option is provided.
-  
-  For examples, to list process information of a dsrqst process with pid 13199 locally,
+      - Option -P, parent process ID (PPID) to filter local processes by their
+          parent;
 
-     rdaps -p 13199 -a dsrqst
+      - Option -u, show only processes owned by this login name.  Without this
+          option all users are included (equivalent to 'ps -ef');
 
-  To list a PBS bactch process with a bid = 334323,
- 
-     rdaps -h PBS -p 334323
- 
+  Usage is displayed if no options or arguments are provided.
+
+  Examples:
+
+    1. Check a local process by PID (with or without the -p flag):
+
+          rdaps -p 13199
+          rdaps 13199
+
+    2. Filter by PID and application name on the local host:
+
+          rdaps -p 13199 -a dsrqst
+
+    3. List all local processes owned by a specific user:
+
+          rdaps -u zji
+
+    4. Query a PBS batch job by job ID:
+
+          rdaps -h casper-pbs -p 334323
+
+    5. List all PBS batch jobs for a user:
+
+          rdaps -h casper-pbs -u zji
+
+    6. List all PBS batch jobs for a user filtered by job name:
+
+          rdaps -h casper-pbs -u zji -a dsrqst
