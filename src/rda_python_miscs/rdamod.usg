@@ -1,51 +1,71 @@
 
- Change modes for directories and files in the current or specified directories.
- The owner of the directories and files must be 'rdadata' for their modes being
- changed. For directories and files with modes changed successfully or with error,
- a leading letter is displayed in font of the relative file names to indicate
- file types; 'D' for a directory and 'F' for a data file.
- 
- Usage: rdamod [-d] [-f] [-D DiretoryMode] [-F FileMode] [-h HostName] [-r] [-R RecursiveLevel] \
-               [Directory/File List]
+ Change permission modes for files and directories owned by 'rdadata'.  Only
+ items owned by 'rdadata' are changed; items with a different owner are logged
+ as errors.  Items already at the target mode are silently skipped.  A leading
+ letter is displayed in front of each changed path to indicate its type: 'D'
+ for a directory and 'F' for a file.
 
-      - Option -d, change directory modes only. Changing Directory mode is included
-        as default. Add this option to exclude changing file mode;
- 
-      - Option -f, change file modes only. Changing File mode is included
-        as default. Add this option to exclude changing Directory mode;
- 
-      - Option -h, pass in the remote host name; hpss for change file mode on HPSS;
+ Usage: rdamod [-d] [-f] [-D DirectoryMode] [-F FileMode] [-h] [-r]  \
+               [-R RecursiveLevel] Directory/File List
 
-      - Option -r, change modes for directories and files recursively;
+      - Option -d, change directory modes only.  Both directories and files are
+          processed by default; this option suppresses file mode changes;
 
-      - Option -R, change modes for directories and files recursively up to
-        the level provided with this Option;
+      - Option -f, change file modes only.  Both directories and files are
+          processed by default; this option suppresses directory mode changes;
 
-      - Option -D, change directory mode to a value provided by this Option.
-        It defaults to "755";
+      - Option -D DirectoryMode, target permission mode for directories in octal
+          notation.  Defaults to 775;
 
-      - Option -F, change file mode to a value provided by this Option.
-        It defaults to "644";
+      - Option -F FileMode, target permission mode for files in octal notation.
+          Defaults to 664;
 
-      - Directory/file List is mandatory; this help document is displayed 
-        without it.  Unix command line wildcards are supported. Use './' or '*'
-        for all directories and files in the current directory to be considered.
+      - Option -h, display this help document;
 
-  This utility program can be executed anywhere. No Mode is changed if neither
-  directory nor file are owned by user 'rdadata'.
-  
-  For examples, to change modes for directories and files under ds277.6, you can
-     
-     1. Change into the dataset home data directory as 'cd /PathTo/ds277.6' and
-        execute 'rdamod ./'; add recursive option '-r' to change modes for directories
-        and files further into the sub-directories, or change directory into
-        a sub-directory to change mode for files inside of it.
-     
-     2. Pass an absolute path to rdamod as 'rdamod /PathTo/ds277.6/';
-        without the ending by '/', mode of top directory itself is
-        changed only unless the recursive option '-r' or '-R RecursiveLevel'
-        is present.
-     
-     3. If the current directory is in another dataset home data directory,
-        such as /PathTo/ds277.7, you can pass a relative path to rdamod
-        as  'rdamod ../ds277.6/' or as 'rdamod ../ds277.6/*'
+      - Option -r, change modes recursively (no depth limit);
+
+      - Option -R RecursiveLevel, change modes recursively up to the specified
+          depth.  -R 1 processes only the immediate contents of each given
+          directory;
+
+      - Directory/File List is mandatory; usage is displayed without it.
+          Shell wildcards are supported.  Use './' or '*' to process everything
+          in the current directory.
+
+  This utility can be run from any directory.  No mode is changed if all
+  matched items are already at the target mode or if none are owned by 'rdadata'.
+
+  Examples:
+
+    1. Change into the dataset home directory and change modes of all
+       immediate contents:
+
+          cd /PathTo/ds277.6
+          rdamod ./
+
+       Add -r to recurse into sub-directories:
+
+          rdamod -r ./
+
+    2. Pass an absolute path with a trailing '/' to process the directory's
+       contents (the directory entry itself is not changed):
+
+          rdamod /PathTo/ds277.6/
+
+       Without the trailing '/', the directory entry itself is also changed
+       unless -r or -R is given:
+
+          rdamod /PathTo/ds277.6
+
+    3. Use a relative path from a neighbouring directory:
+
+          rdamod ../ds277.6/
+          rdamod ../ds277.6/*
+
+    4. Change file modes only, with a non-default target mode:
+
+          rdamod -f -F 660 -r /PathTo/ds277.6/
+
+    5. Change directory modes only, recursively:
+
+          rdamod -d -r /PathTo/ds277.6/

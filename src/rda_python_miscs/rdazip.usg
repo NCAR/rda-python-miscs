@@ -1,20 +1,56 @@
 
- Compress/Uncompress given files.
-  
- Usage: rdazip [-f CompressFormat] FileList
+ Compress or uncompress files using a supported format.  When a target format
+ is given via -f, files are compressed to that format.  Without -f, each file
+ is uncompressed based on its current extension.  Conversion from one format
+ to another is also supported in a single call.
 
-      - Option -f, compression format, Z, gz, zip or bz2. Specify this format 
-                   to compress, otherwise to umcompress
+ Supported formats: gz, Z, bz2, zip
 
-  For examples, to compress a file using gzip, testfile.txt => testfile.txt.gz
- 
-     rdazip -f gz testfile.txt
-  
-  and to uncompress a gzipped file, testfile.txt.gz => get testfile.txt
- 
-     rdazip testfile.txt.gz
- 
-  and to change compression from Z to gz, testfile.txt.Z => testfile.txt.gz
-  
-     rdazip -f gz testfile.txt.Z
- 
+ Usage: rdazip [-f CompressFormat] [-b] FileList
+
+      - Option -f, target compression format.  Providing this option selects
+          compress mode; omitting it selects uncompress mode.  Supported values:
+            gz   - gzip compression   (.gz extension)
+            Z    - compress utility   (.Z extension)
+            bz2  - bzip2 compression  (.bz2 extension)
+            zip  - zip archive        (.zip extension)
+
+      - Option -b, run the operation in the background;
+
+      - FileList, one or more files to process.  Each file must exist.
+          In compress mode the original file is replaced by the compressed
+          version.  In uncompress mode the compressed file is replaced by
+          the uncompressed version.
+
+  Usage is displayed if no files are provided.
+
+  Examples:
+
+    1. Compress a file with gzip:
+
+          rdazip -f gz testfile.txt
+          # result: testfile.txt => testfile.txt.gz
+
+    2. Uncompress a gzip file (format detected from extension):
+
+          rdazip testfile.txt.gz
+          # result: testfile.txt.gz => testfile.txt
+
+    3. Compress a file with bzip2:
+
+          rdazip -f bz2 testfile.txt
+          # result: testfile.txt => testfile.txt.bz2
+
+    4. Uncompress a bzip2 file:
+
+          rdazip testfile.txt.bz2
+          # result: testfile.txt.bz2 => testfile.txt
+
+    5. Convert from compress (.Z) format to gzip (.gz):
+
+          rdazip -f gz testfile.txt.Z
+          # result: testfile.txt.Z => testfile.txt.gz
+
+    6. Compress multiple files with gzip in the background:
+
+          rdazip -b -f gz file1.txt file2.txt file3.txt

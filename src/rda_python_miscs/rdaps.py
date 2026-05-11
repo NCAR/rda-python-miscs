@@ -14,8 +14,15 @@ import sys
 from rda_python_common.pg_file import PgFile
 
 class RdaPs(PgFile):
+   """Show process status for local or PBS batch processes on any accessible host.
+
+   Wraps the system 'ps' command for local processes and 'qstat' for PBS batch
+   jobs.  Results can be filtered by process ID, parent process ID, owner, or
+   application name.
+   """
 
    def __init__(self):
+      """Initialize RdaPs with default process query options."""
       super().__init__()
       self.RDAPS = {
          'a' : None,   # application name
@@ -27,6 +34,12 @@ class RdaPs(PgFile):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into RDAPS options.
+
+      Accepts -a, -h, -p, -P, -u flags.  -p and -P are cast to int; a bare
+      integer argument without a leading flag is treated as a process ID for -p.
+      Displays usage and exits if no options or arguments are provided.
+      """
       optcnt = 0
       argv = sys.argv[1:]
       self.set_suid(self.PGLOG['EUID'])
@@ -34,14 +47,14 @@ class RdaPs(PgFile):
       self.PGLOG['LOGFILE'] = "rdaps.log"   # set different log file
       self.cmdlog("rdaps {}".format(' '.join(argv)))
       for arg in argv:
-         ms = re.match(r'-([ahpPtu])$', arg)
+         ms = re.match(r'-([ahpPu])$', arg)
          if ms:
             option = ms.group(1)
          elif re.match(r'-\w+$', arg):
             self.pglog(arg + ": Unknown Option", self.LGEREX)
          elif option:
             if self.RDAPS[option]: self.pglog("{}: value passed to Option -{} already".format(arg, option), self.LGEREX)
-            if 'pPt'.find(option) > -1:
+            if option in 'pP':
                self.RDAPS[option] = int(arg)
             elif option == 'h':
                self.RDAPS[option] = self.get_short_host(arg)
@@ -60,6 +73,11 @@ class RdaPs(PgFile):
    
    # function to start actions
    def start_actions(self):
+      """Determine whether to query a PBS node or the local host, then take a snapshot.
+
+      If a remote host is given via -h and it matches the PBS node name, calls
+      pbs_snapshot(); otherwise calls process_snapshot() on the local host.
+      """
       self.dssdb_dbname()
       chkloc = 1
       if self.RDAPS['h']:
@@ -70,8 +88,15 @@ class RdaPs(PgFile):
       if chkloc: self.process_snapshot()
       self.cmdlog()
    
-   # get a snapshot of a process status
+   # get a snapshot of local process status
    def process_snapshot(self):
+      """Run 'ps' on the local host and print matching process lines.
+
+      Builds the ps command based on which filter options are set (-p, -P, -u),
+      falling back to 'ps -ef' when none are given.  Each output line is then
+      re-filtered against -u, -p, -P, and -a before being logged.  Consecutive
+      spaces in each matching line are collapsed to a single space.
+      """
       if self.RDAPS['p']:
          cmd = "ps -p {} -f".format(self.RDAPS['p'])
       elif self.RDAPS['P']:
@@ -94,8 +119,14 @@ class RdaPs(PgFile):
             if self.RDAPS['a'] and aname.find(self.RDAPS['a']) < 0: continue
             self.pglog(re.sub(r'  +', ' ', line), self.LOGWRN)
 
-   # get a snapshot of a PBS batch process status
+   # get a snapshot of PBS batch process status
    def pbs_snapshot(self):
+      """Query PBS job status via qstat and print matching job lines.
+
+      Builds qstat options from -u and -p flags; defaults to querying the 'gdex'
+      queue when neither is set.  Reorders the output columns so 'UserName' appears
+      first, then logs one line per job, filtering by -a (job name) when set.
+      """
       qopts = ''
       if self.RDAPS['u']:
          qopts = "-u {}".format(self.RDAPS['u'])
@@ -126,8 +157,9 @@ class RdaPs(PgFile):
             vals.append(stat[k][i])
          self.pglog(' '.join(vals), self.LOGWRN)
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaPs, parse arguments, run, and exit."""
    object = RdaPs()
    object.read_parameters()
    object.start_actions()

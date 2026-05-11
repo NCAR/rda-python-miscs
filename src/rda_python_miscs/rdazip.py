@@ -15,15 +15,29 @@ import sys
 from rda_python_common.pg_file import PgFile
 
 class RdaZip(PgFile):
+   """Compress or uncompress files using a supported format (gz, Z, bz2, zip).
+
+   When a target format is specified via -f, files are compressed to that format.
+   Without -f, each file is uncompressed based on its current extension.
+   Conversion between formats is also supported by combining both in one call.
+   """
 
    def __init__(self):
+      """Initialize RdaZip with default action (uncompress), no format, and empty file list."""
       super().__init__()
-      self.action = 0
-      self.format = None
-      self.files = []
+      self.action = 0      # 0 - uncompress, 1 - compress to self.format
+      self.format = None   # target compression format (gz, Z, bz2, zip)
+      self.files = []      # list of files to process
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into action, format, and file list.
+
+      -f sets compress mode (action=1) and reads the target format from the
+      next argument.  -b enables background execution.  All other non-option
+      arguments are treated as files to process; each must exist on disk.
+      Displays usage and exits if no files are given.
+      """
       argv = sys.argv[1:]
       self.set_help_path(__file__)
       self.PGLOG['LOGFILE'] = "rdazip.log"   # set different log file
@@ -51,12 +65,14 @@ class RdaZip(PgFile):
 
    # function to start actions
    def start_actions(self):
+      """Compress or uncompress each file in the list, then close the command log."""
       for file in self.files:
          self.compress_local_file(file, self.format, self.action, self.LGWNEX)
       self.cmdlog()
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaZip, parse arguments, run, and exit."""
    object = RdaZip()
    object.read_parameters()
    object.start_actions()

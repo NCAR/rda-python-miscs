@@ -34,9 +34,10 @@ OPTIONS = {
 }
 
 #
-# main function to excecute this script
+# main function to execute this script
 #
 def main():
+   """Parse command-line options, validate inputs, and run the wildcard download."""
 
    option = None
    JCS = ['cat', 'tar', 'first', 'last']
@@ -89,9 +90,21 @@ def main():
    sys.exit(0)
 
 #
-# download one or multiple remote files via wget; concat files to a single one if multiple
+# download one or multiple remote files via wget; join files to a single one if multiple
 #
 def download_wildcard_files():
+   """Download remote files matching the wildcard pattern and combine into one output file.
+
+   Skips the download if the local output file already exists and -CN is not set.
+   Runs wget only when -CN is set or fewer than FC files are already present locally.
+   Compares timestamps and file metadata to decide whether a rebuild is needed.
+   Combines downloaded parts using the strategy selected by -JC (cat/tar/first/last).
+   Removes intermediate part-files when -CR is set.
+
+   Returns:
+      int: 1 if the output file was built or rebuilt, 0 if all parts were already
+           up-to-date, or None (implicitly) when a warning/error caused early return.
+   """
 
    deleted = 0
    if OPTIONS['FN']:
@@ -102,7 +115,7 @@ def download_wildcard_files():
 
    dinfo = PgFile.check_local_file(dfile, 1)
    if dinfo and not OPTIONS['CN']:
-      return PgLOG.pglog("{}: file dowloaded already ({} {})".format(dfile, dinfo['date_modified'], dinfo['time_modified']), PgLOG.LOGWRN)
+      return PgLOG.pglog("{}: file downloaded already ({} {})".format(dfile, dinfo['date_modified'], dinfo['time_modified']), PgLOG.LOGWRN)
 
    build = 0 if dinfo else 1
    wfile = OPTIONS['RN'] + "*"
@@ -127,11 +140,11 @@ def download_wildcard_files():
 
    if ncnt == 0:
       if deleted:
-         return PgLOG.pglog("{}: File dowloaded on {}".format(dfile, OPTIONS['UL']), PgLOG.LOGWRN)
+         return PgLOG.pglog("{}: File downloaded on {}".format(dfile, OPTIONS['UL']), PgLOG.LOGWRN)
       else:
-         return PgLOG.pglog("{}: NO file to dowload on {}".format(dfile, OPTIONS['UL']), PgLOG.LOGWRN)
+         return PgLOG.pglog("{}: NO file to download on {}".format(dfile, OPTIONS['UL']), PgLOG.LOGWRN)
    elif ncnt < OPTIONS['MC']:
-      return PgLOG.pglog("{}: NOT ready, only {} of {} files dowloaded".format(dfile, ncnt, OPTIONS['MC']), PgLOG.LOGWRN)
+      return PgLOG.pglog("{}: NOT ready, only {} of {} files downloaded".format(dfile, ncnt, OPTIONS['MC']), PgLOG.LOGWRN)
 
    rfiles = sorted(nlist)
    size = skip = 0
@@ -145,10 +158,10 @@ def download_wildcard_files():
       elif rfile not in dlist:
          build = 1
       elif PgFile.compare_file_info(dlist[rfile], rinfo) > 0:
-         PgLOG.pglog("{}: Newer file dowloaded from {}".format(rfile, OPTIONS['UL']), PgLOG.LOGWRN)
+         PgLOG.pglog("{}: Newer file downloaded from {}".format(rfile, OPTIONS['UL']), PgLOG.LOGWRN)
          build = 1
       else:
-         PgLOG.pglog("{}: No newer file found on ".format(rfile, OPTIONS['UL']), PgLOG.LOGWRN)
+         PgLOG.pglog("{}: No newer file found on {}".format(rfile, OPTIONS['UL']), PgLOG.LOGWRN)
 
    if skip == ncnt: return 0
 

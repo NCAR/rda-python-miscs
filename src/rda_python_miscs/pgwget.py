@@ -14,8 +14,15 @@ import re
 from rda_python_common.pg_file import PgFile
 
 class PgWget(PgFile):
+   """Wrapper around wget to download one or more files identified by a root name pattern.
+
+   Supports wildcard-based remote file matching, optional freshness checks, and
+   multiple strategies for combining multiple downloaded parts into a single output
+   file (concatenation, tar archive, or selecting the first/last file).
+   """
 
    def __init__(self):
+      """Initialize PgWget with default wget options and download control flags."""
       super().__init__()
       self.OPTIONS = {
          'OP' : "-np -nH -nd -m -e robots=off --no-check-certificate",
@@ -33,10 +40,19 @@ class PgWget(PgFile):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into OPTIONS and validate required inputs.
+
+      Recognises boolean flags -CN, -CR, -SM and value options -OP, -UL, -RN,
+      -FN, -FC, -MC, -EX, -JC (case-insensitive).  -FC and -MC are cast to int.
+      -JC must be one of: cat, tar, first, last.  Prints usage and exits if
+      -UL or -RN is missing.  Defaults MC to FC and appends -q to OP when -SM
+      is not set.
+      """
+      self.set_help_path(__file__)
       option = None
       JCS = ['cat', 'tar', 'first', 'last']
       options = '|'.join(self.OPTIONS)
-      argv = sys.argv[1:] 
+      argv = sys.argv[1:]
       self.PGLOG['LOGFILE'] = "pgwget.log"
       for arg in argv:
          if arg == "-b":
@@ -57,31 +73,31 @@ class PgWget(PgFile):
          self.OPTIONS[option] = int(arg) if re.match(r'^(FC|MC)$', option) else arg
          option = None
       if not (self.OPTIONS['UL'] and self.OPTIONS['RN']):
-         print("Usage: pgwget [-CN] [-CR] [-FC FileCount] [-JC JoinCommand] [-MC MinFileCount] [-FN FileName] -UL WebURL -RN RootFileName [-EX FileNameExtension]")
-         print("   Provide at least WebURL and RootFileName to wget file(s)")
-         print("   Option -CN - check new file if presents")
-         print("   Option -CR - clean the downloaded remote file(s) if presents")
-         print("   Option -FC - number of files to be valid download; defaults to 1")
-         print("   Option -JC - file joining command, it defaults to cat, could be tar, or last/first to choose the last/first one")
-         print("   Option -SM - Show wget dumping message; defaults to False")
-         print("   Option -MC - minimal number of files to be valid download; defaults to -FC")
-         print("   Option -FN - file name to be used if successful download; defaults to RootFileName.FileNameExtension")
-         print("   Option -OP - options used by wget, defaults to '-np -nH -nd -m -e robots=off'")
-         print("   Option -UL - (mandatory) WebURL with path")
-         print("   Option -RN - (mandatory) the root portion of the remote file name to be downloaded")
-         print("   Option -EX - file name extension to be used.")
-         sys.exit(0)
+         self.show_usage("pgwget")
       self.cmdlog("pgwget " + ' '.join(argv))
       if not self.OPTIONS['MC']: self.OPTIONS['MC'] = self.OPTIONS['FC']
       if not self.OPTIONS['SM']: self.OPTIONS['OP'] += ' -q'
    
    # function to start actions
    def start_actions(self):
-      self.download_wildcard_files()   
+      """Run the wildcard download and close the command log."""
+      self.download_wildcard_files()
       self.cmdlog()
    
-   # download one or multiple remote files via wget; concat files to a single one if multiple
+   # download one or multiple remote files via wget; join files to a single one if multiple
    def download_wildcard_files(self):
+      """Download remote files matching the wildcard pattern and combine into one output file.
+
+      Skips the download if the local output file already exists and -CN is not set.
+      Runs wget only when -CN is set or fewer than FC files are already present locally.
+      Compares timestamps and file metadata to decide whether a rebuild is needed.
+      Combines downloaded parts using the strategy selected by -JC (cat/tar/first/last).
+      Removes intermediate part-files when -CR is set.
+
+      Returns:
+         int: 1 if the output file was built or rebuilt, 0 if all parts were already
+              up-to-date, or None (implicitly) when a warning/error caused early return.
+      """
       deleted = 0
       if self.OPTIONS['FN']:
          dfile = self.OPTIONS['FN']
@@ -90,7 +106,7 @@ class PgWget(PgFile):
          if self.OPTIONS['EX']: dfile += "." + self.OPTIONS['EX']
       dinfo = self.check_local_file(dfile, 1)
       if dinfo and not self.OPTIONS['CN']:
-         return self.pglog("{}: file dowloaded already ({} {})".format(dfile, dinfo['date_modified'], dinfo['time_modified']), self.LOGWRN)
+         return self.pglog("{}: file downloaded already ({} {})".format(dfile, dinfo['date_modified'], dinfo['time_modified']), self.LOGWRN)
       build = 0 if dinfo else 1
       wfile = self.OPTIONS['RN'] + "*"
       if self.OPTIONS['EX']: wfile += "." + self.OPTIONS['EX']
@@ -112,11 +128,11 @@ class PgWget(PgFile):
          ncnt = dcnt
       if ncnt == 0:
          if deleted:
-            return self.pglog("{}: File dowloaded on {}".format(dfile, self.OPTIONS['UL']), self.LOGWRN)
+            return self.pglog("{}: File downloaded on {}".format(dfile, self.OPTIONS['UL']), self.LOGWRN)
          else:
-            return self.pglog("{}: NO file to dowload on {}".format(dfile, self.OPTIONS['UL']), self.LOGWRN)
+            return self.pglog("{}: NO file to download on {}".format(dfile, self.OPTIONS['UL']), self.LOGWRN)
       elif ncnt < self.OPTIONS['MC']:
-         return self.pglog("{}: NOT ready, only {} of {} files dowloaded".format(dfile, ncnt, self.OPTIONS['MC']), self.LOGWRN)
+         return self.pglog("{}: NOT ready, only {} of {} files downloaded".format(dfile, ncnt, self.OPTIONS['MC']), self.LOGWRN)
       rfiles = sorted(nlist)
       size = skip = 0
       for i in range(ncnt):
@@ -129,10 +145,10 @@ class PgWget(PgFile):
          elif rfile not in dlist:
             build = 1
          elif self.compare_file_info(dlist[rfile], rinfo) > 0:
-            self.pglog("{}: Newer file dowloaded from {}".format(rfile, self.OPTIONS['UL']), self.LOGWRN)
+            self.pglog("{}: Newer file downloaded from {}".format(rfile, self.OPTIONS['UL']), self.LOGWRN)
             build = 1
          else:
-            self.pglog("{}: No newer file found on ".format(rfile, self.OPTIONS['UL']), self.LOGWRN)
+            self.pglog("{}: No newer file found on {}".format(rfile, self.OPTIONS['UL']), self.LOGWRN)
       if skip == ncnt: return 0
       if not (build or size == dinfo['data_size']): build = 1
       if not build: return self.pglog(dfile + ": Use existing file", self.LOGWRN)
@@ -160,8 +176,9 @@ class PgWget(PgFile):
                self.pgsystem("rm -f " + rfiles[i], self.LOGWRN, 5)
       return 1
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate PgWget, parse arguments, run, and exit."""
    object = PgWget()
    object.read_parameters()
    object.start_actions()

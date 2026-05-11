@@ -15,8 +15,16 @@ import time
 from rda_python_common.pg_file import PgFile
 
 class RdaKill(PgFile):
+   """Kill local processes or PBS batch jobs by process ID, parent PID, or status.
+
+   For local processes, sends SIGKILL (-9) to the matched process and all its
+   children recursively.  For PBS batch jobs, uses qdel to cancel jobs by job ID
+   or by filtering all jobs in a queue by their current status.  Also records an
+   interrupt flag in the dscheck table when a tracked process is killed.
+   """
 
    def __init__(self):
+      """Initialize RdaKill with default kill options."""
       super().__init__()
       self.RDAKILL = {
          'a': None,    # application name
@@ -31,6 +39,13 @@ class RdaKill(PgFile):
 
    # function to read parameters
    def read_parameters(self):
+      """Parse command-line arguments into RDAKILL options.
+
+      Accepts -a, -h, -p, -P, -q, -s, -u flags; -r is a boolean toggle.
+      -p and -P are cast to int.  A bare integer argument without a leading
+      flag is accepted as a process ID when -p has not been set yet.
+      Displays usage and exits if no options or arguments are provided.
+      """
       optcnt = 0
       option = None
       argv = sys.argv[1:]
@@ -40,7 +55,7 @@ class RdaKill(PgFile):
       self.PGLOG['LOGFILE'] = "rdakill.log"   # set different log file
       self.cmdlog("rdakill {}".format(' '.join(argv)))
       for arg in argv:
-         ms = re.match(r'-([ahpPqstu])$', arg)
+         ms = re.match(r'-([ahpPqsu])$', arg)
          if ms:
             option = ms.group(1)
          elif re.match(r'-r$', arg):
@@ -49,7 +64,7 @@ class RdaKill(PgFile):
             self.pglog(arg + ": Unknown Option", self.LGEREX)
          elif option:
             if self.RDAKILL[option]: self.pglog("{}: value passed to Option -{} already".format(arg, option), self.LGEREX)
-            if 'pPt'.find(option) > -1:
+            if option in 'pP':
                self.RDAKILL[option] = int(arg)
             elif option == 'h':
                self.RDAKILL[option] = self.get_short_host(arg)
@@ -59,8 +74,8 @@ class RdaKill(PgFile):
             optcnt += 1
          else:
             ms = re.match(r'^(\d+)$', arg)
-            if ms and self.RDAKILL['p']:
-               self.RDAKILL['p'] = int(ms.group(1))   # pid allow value only without leading option
+            if ms and not self.RDAKILL['p']:
+               self.RDAKILL['p'] = int(ms.group(1))   # bare integer accepted as PID when -p not yet set
                optcnt += 1
             else:
                self.pglog(arg + ": pass in value without Option", self.LGEREX)
@@ -68,6 +83,12 @@ class RdaKill(PgFile):
    
    # function to start actions
    def start_actions(self):
+      """Dispatch to PBS or local kill path based on the -h option.
+
+      When -h matches the PBS node name, requires either a job ID (-p) or a
+      batch status (-s) and delegates accordingly.  Otherwise kills local
+      processes matching -p, -P, or -a, requiring at least one to be set.
+      """
       killloc = 1
       if self.RDAKILL['h']:
          self.local_host_action(self.RDAKILL['h'], "kill processes", self.PGLOG['HOSTNAME'], self.LGEREX)
@@ -85,8 +106,22 @@ class RdaKill(PgFile):
          self.rdakill_processes(self.RDAKILL['p'], self.RDAKILL['P'], self.RDAKILL['a'], self.RDAKILL['u'])
       self.cmdlog()
    
-   # kill processes for given condition
+   # kill local processes matching the given filters
    def rdakill_processes(self, pid, ppid, aname = None, uname = None, level = 0):
+      """Recursively kill local processes matching pid, ppid, app name, or user.
+
+      Runs 'ps' with the most specific filter available, then walks each matching
+      line, recursing into child processes before killing the parent.  Logs a
+      warning if no matching process is found at the top level.  Also records a
+      dscheck interrupt for each killed PID.
+
+      Args:
+         pid (int): Process ID to kill; 0 means no PID filter.
+         ppid (int): Parent PID filter; 0 means no parent filter.
+         aname (str|None): Application name substring filter.
+         uname (str|None): Owner username filter; None means all users.
+         level (int): Recursion depth (0 = top-level call).
+      """
       kcnt = 0
       if pid:
          cmd = "ps -p {} -f".format(pid)
@@ -114,15 +149,26 @@ class RdaKill(PgFile):
                self.kill_local_child(cid, uid, re.sub(r'  +', ' ', line))
                self.record_dscheck_interrupt(cid, self.PGLOG['HOSTNAME'])
       if not (kcnt or level):
-         buf = "No process idendified to kill "
+         buf = "No process identified to kill "
          if self.RDAKILL['h']:
             buf += "on " + self.RDAKILL['h']
          else:
             buf += "locally"
          self.pglog(buf, self.LOGWRN)
    
-   # a local child process
+   # kill a local child process
    def kill_local_child(self, pid, uid, line):
+      """Send SIGKILL to a single local process and log the outcome.
+
+      Skips the kill if the process is no longer running.  Logs 'Kill' on
+      success, 'Error Kill' if the process persists after the kill command,
+      or 'Quit' if the process had already exited before the kill was sent.
+
+      Args:
+         pid (int): PID of the process to kill.
+         uid (str): Owner username, used to build the kill command via suid.
+         line (str): Formatted ps output line for logging context.
+      """
       if self.check_process(pid):
          cmd = self.get_local_command("kill -9 {}".format(pid), uid)
          if self.pgsystem(cmd, self.LOGWRN, 260):     # 4+256
@@ -131,8 +177,20 @@ class RdaKill(PgFile):
             return self.pglog("Error Kill: {}\n{}".format(line, self.PGLOG['SYSERR']), self.LOGWRN)
       if not self.check_process(pid): self.pglog("Quit: " + line, self.LOGWRN)
 
-   # kill a pbs batch job
+   # kill a PBS batch job by job ID
    def rdakill_pbs_batch(self, bid):
+      """Cancel a single PBS batch job by job ID using qdel.
+
+      Looks up job info to get the owner, then runs qdel (or qdelcasper on
+      Casper hosts) as that user.  Records a dscheck interrupt on success.
+      Logs an error if the job ID is not found or if qdel fails.
+
+      Args:
+         bid (int): PBS batch job ID to cancel.
+
+      Returns:
+         int: 1 if the job was successfully cancelled, 0 otherwise.
+      """
       ret = 0
       stat = self.get_pbs_info(bid, 0, self.LOGWRN)
       if stat:
@@ -146,9 +204,20 @@ class RdaKill(PgFile):
       if not ret and self.PGLOG['SYSERR']: self.pglog(self.PGLOG['SYSERR'], self.LGEREX)
       return ret
 
-   # kill PBS batch jobs for given status
+   # kill PBS batch jobs matching a given status
    def rdakill_pbs_status(self, stat, queue, uname):
-      if not queue: queue = 'rda'
+      """Cancel all PBS batch jobs in a queue that match the given status.
+
+      Queries qstat for the specified queue (defaulting to 'rda') and optional
+      user filter, then calls rdakill_pbs_batch for each job whose State field
+      matches stat.  Logs a summary of how many jobs were found and killed.
+
+      Args:
+         stat (str): PBS job state to match (e.g. 'PEND', 'RUN').
+         queue (str|None): PBS queue name; defaults to 'gdex' if None.
+         uname (str|None): Limit to jobs owned by this user; None means all users.
+      """
+      if not queue: queue = 'gdex'
       qopts = ''
       if uname:
          qopts = "-u " + uname
@@ -170,15 +239,25 @@ class RdaKill(PgFile):
       if uname: line += " for " + uname
       self.pglog(line, self.LOGWRN)
 
-   # record a dscheck 
+   # record a dscheck interrupt for a killed process
    def record_dscheck_interrupt(self, pid, host):
+      """Mark a dscheck record as interrupted when its process has been killed.
+
+      Looks up the dscheck entry by PID and hostname.  If found, sets its status
+      to 'I' (interrupted), clears the PID lock, and updates the check timestamp.
+
+      Args:
+         pid (int): PID (or PBS job ID) of the killed process.
+         host (str): Hostname where the process was running.
+      """
       pgrec = self.pgget("dscheck", "cindex", "pid = {} AND hostname = '{}'".format(pid, host), self.LOGERR)
       if pgrec:
          record = {'chktime': int(time.time()), 'status': 'I', 'pid': 0}   # release lock
          self.pgupdt("dscheck", record, "cindex = {}".format(pgrec['cindex']), self.LGEREX)
 
-# main function to excecute this script
+# main function to execute this script
 def main():
+   """Entry point: instantiate RdaKill, parse arguments, run, and exit."""
    object = RdaKill()
    object.read_parameters()
    object.start_actions()
