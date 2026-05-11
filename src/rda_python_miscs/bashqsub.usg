@@ -33,18 +33,18 @@
 A bash script example:
 #!/usr/bin/bash
 
-#PBS -o /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
-#PBS -e /gpfs/u/home/gdexdata/dssdb/log/gdexqsub/
+#PBS -o /glade/u/home/gdexdata/dssdb/log/gdexqsub/
+#PBS -e /glade/u/home/gdexdata/dssdb/log/gdexqsub/
 #PBS -A P43713000
 #PBS -q gdex@casper-pbs
 #PBS -m n
 #PBS -N dsrqst
 #PBS -l walltime=1:00:00
 #PBS -l select=1:ncpus=1:mem=1gb
-export HOME=/gpfs/u/home/zji
+export HOME=/glade/u/home/zji
 source /etc/profile.d/z00_modules.sh
 source /glade/u/apps/opt/conda/etc/profile.d/conda.sh
-source /gpfs/u/home/zji/.bashrc
+source /glade/u/home/zji/.bashrc
 pwd; hostname; date
 
 module load ncarenv
