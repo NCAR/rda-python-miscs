@@ -87,3 +87,14 @@ pywrapper-install --link gdexmod  --simple
 
 Each command creates `bin/<name> -> bin/setuid_<name>` and the program runs
 as the current user with no privilege change.
+
+### Setup guide
+
+After `pip install`, run `miscs-setup` at any time to display the setup guide:
+
+```bash
+miscs-setup
+```
+
+The guide is also shown automatically if any `setuid_*` connector script is
+invoked directly before the setuid wrapper has been configured.
