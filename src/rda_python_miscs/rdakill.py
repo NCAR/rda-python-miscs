@@ -258,6 +258,10 @@ class RdaKill(PgFile):
 # main function to execute this script
 def main():
    """Entry point: instantiate RdaKill, parse arguments, run, and exit."""
+   import os, sys
+   if os.path.basename(sys.argv[0]).startswith('setuid_'):
+      from rda_python_miscs.miscs_setup import main as setup_main
+      setup_main()
    object = RdaKill()
    object.read_parameters()
    object.start_actions()

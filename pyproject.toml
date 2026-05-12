@@ -52,3 +52,4 @@ pythonpath = [
 "setuid_rdamod" = "rda_python_miscs.rdamod:main"
 "setuid_gdexmod" = "rda_python_miscs.rdamod:main"
 "pgrst" = "rda_python_miscs.pg_rst:main"
+"miscs-setup" = "rda_python_miscs.miscs_setup:main"
