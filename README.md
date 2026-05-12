@@ -19,15 +19,15 @@ The package provides two categories of programs:
 | `rdaps` | `gdexps` | List running RDA processes |
 | `rdazip` | `gdexzip` | Zip/unzip RDA data files |
 | `rdaown` | `gdexown` | Change file ownership to gdexdata |
-| `pgrst` | | Restart RDA programs |
+| `pgrst` | | Convert .usg files to RST and push to gdex-docs-* repos on GitHub for readthedocs.io |
 
 **Run as gdexdata via setuid (requires setup below):**
 
-| Command | Alias | Connector script |
-|---------|-------|-----------------|
-| `rdacp` | `gdexcp` | `setuid_rdacp` / `setuid_gdexcp` |
-| `rdakill` | `gdexkill` | `setuid_rdakill` / `setuid_gdexkill` |
-| `rdamod` | `gdexmod` | `setuid_rdamod` / `setuid_gdexmod` |
+| Command | Alias | Connector script | Description |
+|---------|-------|-----------------|-------------|
+| `rdacp` | `gdexcp` | `setuid_rdacp` / `setuid_gdexcp` | Copy files as gdexdata |
+| `rdakill` | `gdexkill` | `setuid_rdakill` / `setuid_gdexkill` | Kill processes as gdexdata |
+| `rdamod` | `gdexmod` | `setuid_rdamod` / `setuid_gdexmod` | Modify files as gdexdata |
 
 ## Setuid Setup
 
@@ -66,8 +66,8 @@ pywrapper-install --link rdacp   --user gdexdata
 pywrapper-install --link gdexcp  --user gdexdata
 pywrapper-install --link rdakill --user gdexdata
 pywrapper-install --link gdexkill --user gdexdata
-pywrapper-install --link rdamod  --user gdexdata
-pywrapper-install --link gdexmod --user gdexdata
+pywrapper-install --link rdamod   --user gdexdata
+pywrapper-install --link gdexmod  --user gdexdata
 ```
 
 `pywrapper-install` with no arguments displays the full user guide.
