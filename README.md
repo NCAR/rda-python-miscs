@@ -15,7 +15,7 @@ The package provides two categories of programs:
 | `tcshqsub` | | Submit tcsh batch jobs |
 | `rdasub` | `gdexsub` | Submit RDA batch jobs |
 | `pgwget` | | Download files via wget |
-| `rdals` | `gdexls` | List files with GDEX metadata |
+| `gdexls` | | List files with GDEX metadata |
 | `rdaps` | `gdexps` | List running RDA processes |
 | `rdazip` | `gdexzip` | Zip/unzip RDA data files |
 | `rdaown` | `gdexown` | Change file ownership to gdexdata |
