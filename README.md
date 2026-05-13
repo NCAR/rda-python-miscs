@@ -59,15 +59,15 @@ Run these steps once per environment after `pip install`:
 
 ```bash
 # Compile the pywrapper C binary (once per environment):
-pywrapper-install --user gdexdata
+pywrapper-install -u gdexdata
 
 # Wire up each setuid program:
-pywrapper-install --link rdacp   --user gdexdata
-pywrapper-install --link gdexcp  --user gdexdata
-pywrapper-install --link rdakill --user gdexdata
-pywrapper-install --link gdexkill --user gdexdata
-pywrapper-install --link rdamod   --user gdexdata
-pywrapper-install --link gdexmod  --user gdexdata
+pywrapper-install -l rdacp    -u gdexdata
+pywrapper-install -l gdexcp   -u gdexdata
+pywrapper-install -l rdakill  -u gdexdata
+pywrapper-install -l gdexkill -u gdexdata
+pywrapper-install -l rdamod   -u gdexdata
+pywrapper-install -l gdexmod  -u gdexdata
 ```
 
 `pywrapper-install` with no arguments displays the full user guide.
@@ -77,12 +77,12 @@ pywrapper-install --link gdexmod  --user gdexdata
 Users who do not need the setuid mechanism can create direct symlinks instead:
 
 ```bash
-pywrapper-install --link rdacp    --simple
-pywrapper-install --link gdexcp   --simple
-pywrapper-install --link rdakill  --simple
-pywrapper-install --link gdexkill --simple
-pywrapper-install --link rdamod   --simple
-pywrapper-install --link gdexmod  --simple
+pywrapper-install -l rdacp    -s
+pywrapper-install -l gdexcp   -s
+pywrapper-install -l rdakill  -s
+pywrapper-install -l gdexkill -s
+pywrapper-install -l rdamod   -s
+pywrapper-install -l gdexmod  -s
 ```
 
 Each command creates `bin/<name> -> bin/setuid_<name>` and the program runs
