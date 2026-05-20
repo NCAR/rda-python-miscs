@@ -59,15 +59,10 @@ Run these steps once per environment after `pip install`:
 
 ```bash
 # Compile the pywrapper C binary (once per environment):
-pywrapper-install -u gdexdata
+pywrapper-install -c|--compile -n|--username gdexdata
 
-# Wire up each setuid program:
-pywrapper-install -l rdacp    -u gdexdata
-pywrapper-install -l gdexcp   -u gdexdata
-pywrapper-install -l rdakill  -u gdexdata
-pywrapper-install -l gdexkill -u gdexdata
-pywrapper-install -l rdamod   -u gdexdata
-pywrapper-install -l gdexmod  -u gdexdata
+# Wire up all setuid programs in one pass:
+pywrapper-install -l|--link all
 ```
 
 `pywrapper-install` with no arguments displays the full user guide.
@@ -77,16 +72,20 @@ pywrapper-install -l gdexmod  -u gdexdata
 Users who do not need the setuid mechanism can create direct symlinks instead:
 
 ```bash
-pywrapper-install -l rdacp    -s
-pywrapper-install -l gdexcp   -s
-pywrapper-install -l rdakill  -s
-pywrapper-install -l gdexkill -s
-pywrapper-install -l rdamod   -s
-pywrapper-install -l gdexmod  -s
+pywrapper-install -l|--link all -s|--simple
 ```
 
-Each command creates `bin/<name> -> bin/setuid_<name>` and the program runs
-as the current user with no privilege change.
+This creates `bin/<name> -> bin/setuid_<name>` for every setuid program and
+they run as the current user with no privilege change.
+
+### Update an existing installation (no sudo required)
+
+When the package is upgraded and a new `pywrapper.c` is bundled, recompile and
+reinstall all setuid binaries using the existing `pgstart_*` binaries:
+
+```bash
+pywrapper-install -u|--update
+```
 
 ### Setup guide
 

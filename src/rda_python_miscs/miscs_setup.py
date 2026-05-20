@@ -50,28 +50,26 @@ SETUP_GUIDE = """
  ------------------------------------------------------
 
    # Compile the pywrapper C binary (once per environment):
-   pywrapper-install --user gdexdata
+   pywrapper-install -c|--compile -n|--username gdexdata
 
-   # Wire up each setuid program:
-   pywrapper-install --link rdacp    --user gdexdata
-   pywrapper-install --link gdexcp   --user gdexdata
-   pywrapper-install --link rdakill  --user gdexdata
-   pywrapper-install --link gdexkill --user gdexdata
-   pywrapper-install --link rdamod   --user gdexdata
-   pywrapper-install --link gdexmod  --user gdexdata
+   # Wire up all setuid programs in one pass:
+   pywrapper-install -l|--link all
 
  Simple Install (no sudo required, runs as current user)
  -------------------------------------------------------
 
-   pywrapper-install --link rdacp    --simple
-   pywrapper-install --link gdexcp   --simple
-   pywrapper-install --link rdakill  --simple
-   pywrapper-install --link gdexkill --simple
-   pywrapper-install --link rdamod   --simple
-   pywrapper-install --link gdexmod  --simple
+   pywrapper-install -l|--link all -s|--simple
 
-   Each command creates bin/<name> -> bin/setuid_<name>.
-   The program runs as the current user with no privilege change.
+   This creates bin/<name> -> bin/setuid_<name> for every setuid program.
+   The programs run as the current user with no privilege change.
+
+ Update Existing Installation (no sudo required)
+ -----------------------------------------------
+
+   pywrapper-install -u|--update
+
+   Recompiles pywrapper and reinstalls all pgstart_* setuid binaries
+   using the existing pgstart_* binaries already in bin/.
 
 """
 
