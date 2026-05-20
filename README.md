@@ -29,32 +29,6 @@ The package provides two categories of programs:
 | `rdakill` | `gdexkill` | `setuid_rdakill` / `setuid_gdexkill` | Kill local processes and their children, or cancel PBS batch jobs |
 | `rdamod` | `gdexmod` | `setuid_rdamod` / `setuid_gdexmod` | Change permission modes for files and directories owned by rdadata |
 
-## Installing rda-python-common
-
-For local development, clone this repo alongside your project and install it
-in editable mode so that changes are picked up without re-installing:
-
-```bash
-git clone https://github.com/NCAR/rda-python-common.git
-cd rda-python-common
-pip install -e .
-```
-
-For a regular (non-editable) install from a checkout:
-
-```bash
-pip install /path/to/rda-python-common
-```
-
-For a production install on a system that uses the published distribution:
-
-```bash
-pip install rda_python_common
-```
-
-The package brings in its own transitive dependencies (`psycopg2-binary`,
-`rda-python-globus`, `unidecode`, `hvac`).
-
 ## Setuid Setup
 
 The setuid programs (`rdacp`, `rdakill`, `rdamod` and their `gdex*` aliases)
@@ -123,3 +97,29 @@ miscs-setup
 
 The guide is also shown automatically if any `setuid_*` connector script is
 invoked directly before the setuid wrapper has been configured.
+
+## Installing rda-python-miscs
+
+For local development, clone this repo alongside your project and install it
+in editable mode so that changes are picked up without re-installing:
+
+```bash
+git clone https://github.com/NCAR/rda-python-miscs.git
+cd rda-python-miscs
+pip install -e .
+```
+
+For a regular (non-editable) install from a checkout:
+
+```bash
+pip install /path/to/rda-python-miscs
+```
+
+For a production install on a system that uses the published distribution:
+
+```bash
+pip install rda_python_miscs
+```
+
+The package brings in its own transitive dependencies (`rda_python_common`,
+`rda_python_setuid`).
