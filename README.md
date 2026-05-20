@@ -29,33 +29,62 @@ The package provides two categories of programs:
 | `rdakill` | `gdexkill` | `setuid_rdakill` / `setuid_gdexkill` | Kill local processes and their children, or cancel PBS batch jobs |
 | `rdamod` | `gdexmod` | `setuid_rdamod` / `setuid_gdexmod` | Change permission modes for files and directories owned by rdadata |
 
-## Setuid Setup
+## Environment setup
 
-The setuid programs (`rdacp`, `rdakill`, `rdamod` and their `gdex*` aliases)
-execute as the common user `gdexdata` via the `rda_python_setuid` mechanism.
-`rda_python_setuid` is declared as a dependency and installed automatically
-with this package.
+Create a Python environment first; package installs in the next section run
+inside whichever environment you activate here.
 
-### Environment setup
-
-#### Option A — Python venv (DECS machines)
+### Option A — Python venv (DECS machines)
 
 ```bash
 python3 -m venv $ENVHOME          # e.g. /glade/u/home/gdexdata/gdexmsenv
 source $ENVHOME/bin/activate
-pip install rda_python_miscs
 ```
 
-#### Option B — Conda (DAV/Casper)
+### Option B — Conda (DAV/Casper)
 
 ```bash
+conda create -n pg-gdex python=3.12
 conda activate pg-gdex            # e.g. /glade/work/gdexdata/conda-envs/pg-gdex
+```
+
+## Installing rda-python-miscs
+
+Pick whichever install mode fits your workflow.  All three pull in the
+transitive dependencies (`rda_python_common`, `rda_python_setuid`)
+automatically.
+
+For local development, clone this repo alongside your project and install it
+in editable mode so that changes are picked up without re-installing:
+
+```bash
+git clone https://github.com/NCAR/rda-python-miscs.git
+cd rda-python-miscs
+pip install -e .
+```
+
+For a regular (non-editable) install from a checkout:
+
+```bash
+pip install /path/to/rda-python-miscs
+```
+
+For a production install on a system that uses the published distribution:
+
+```bash
 pip install rda_python_miscs
 ```
+
+## Setuid Setup
+
+The setuid programs (`rdacp`, `rdakill`, `rdamod` and their `gdex*` aliases)
+execute as the common user `gdexdata` via the `rda_python_setuid` mechanism,
+which is pulled in automatically as a dependency.  After `pip install` above,
+choose one of the wiring options below.
 
 ### Full setuid install (requires sudo access to gdexdata)
 
-Run these steps once per environment after `pip install`:
+Run these steps once per environment:
 
 ```bash
 # Compile the pywrapper C binary (once per environment):
@@ -97,29 +126,3 @@ miscs-setup
 
 The guide is also shown automatically if any `setuid_*` connector script is
 invoked directly before the setuid wrapper has been configured.
-
-## Installing rda-python-miscs
-
-For local development, clone this repo alongside your project and install it
-in editable mode so that changes are picked up without re-installing:
-
-```bash
-git clone https://github.com/NCAR/rda-python-miscs.git
-cd rda-python-miscs
-pip install -e .
-```
-
-For a regular (non-editable) install from a checkout:
-
-```bash
-pip install /path/to/rda-python-miscs
-```
-
-For a production install on a system that uses the published distribution:
-
-```bash
-pip install rda_python_miscs
-```
-
-The package brings in its own transitive dependencies (`rda_python_common`,
-`rda_python_setuid`).
