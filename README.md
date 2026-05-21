@@ -63,6 +63,15 @@ cd rda-python-miscs
 pip install -e .
 ```
 
+To test a specific branch (e.g. an in-progress feature or fix branch), pass
+`-b/--branch` to `git clone`:
+
+```bash
+git clone -b <branch-name> https://github.com/NCAR/rda-python-miscs.git
+cd rda-python-miscs
+pip install -e .
+```
+
 For a regular (non-editable) install from a checkout:
 
 ```bash
