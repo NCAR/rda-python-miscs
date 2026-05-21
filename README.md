@@ -127,11 +127,6 @@ pywrapper-install -u|--update
 
 ### Setup guide
 
-After `pip install`, run `miscs-setup` at any time to display the setup guide:
-
-```bash
-miscs-setup
-```
-
-The guide is also shown automatically if any `setuid_*` connector script is
-invoked directly before the setuid wrapper has been configured.
+The shared setuid setup guide is shown automatically if any `setuid_*`
+connector script is invoked directly before the setuid wrapper has been
+configured.
