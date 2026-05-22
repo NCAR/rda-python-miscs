@@ -44,13 +44,13 @@ source $ENVHOME/bin/activate
 ### Option B — Conda (DAV/Casper)
 
 ```bash
-conda create -n pg-gdex python=3.12
-conda activate pg-gdex            # e.g. /glade/work/gdexdata/conda-envs/pg-gdex
+conda create --prefix $ENVHOME python=3.12   # e.g. /glade/work/gdexdata/conda-envs/pg-gdex
+conda activate $ENVHOME
 ```
 
 ## Installing rda-python-miscs
 
-Pick whichever install mode fits your workflow.  All three pull in the
+Pick whichever install mode fits your workflow.  All four pull in the
 transitive dependencies (`rda_python_common`, `rda_python_setuid`)
 automatically.
 
@@ -87,20 +87,27 @@ pip install rda_python_miscs
 ## Setuid Setup
 
 The setuid programs (`rdacp`, `rdakill`, `rdamod` and their `gdex*` aliases)
-execute as the common user `gdexdata` via the `rda_python_setuid` mechanism,
-which is pulled in automatically as a dependency.  After `pip install` above,
-choose one of the wiring options below.
+execute as the common user `PGLOG['COMMONUSER']` (default `gdexdata`) via
+the `rda_python_setuid` mechanism, which is pulled in automatically as a
+dependency.  After `pip install` above, choose one of the wiring options
+below.
 
-### Full setuid install (requires sudo access to gdexdata)
+### Full setuid install (requires sudo access to COMMONUSER)
 
 Run these steps once per environment:
 
 ```bash
-# Compile the pywrapper C binary (once per environment):
+# 1. Compile the pywrapper C binary (once per environment):
 pywrapper-install -c|--compile -n|--username gdexdata
 
-# Wire up all setuid programs in one pass:
+# 2. Wire up all setuid programs in one pass:
 pywrapper-install -l|--link all
+
+# 3. Optionally, install a pgstart_<loginname> binary so <loginname> (any
+#    user in the same group as PGLOG['COMMONUSER']) can run commands as
+#    themselves.  Run either by PGLOG['ADMINUSER'] (default zji, if it has
+#    'sudo -u <loginname>'), or by <loginname> directly:
+pywrapper-install -p|--pgstart -n|--username <loginname>
 ```
 
 `pywrapper-install` with no arguments displays the full user guide.
