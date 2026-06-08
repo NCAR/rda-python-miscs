@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rda_python_miscs"
-version = "2.0.16"
+version = "3.0.0"
 authors = [
   { name="Zaihua Ji", email="zji@ucar.edu" },
 ]
@@ -38,7 +38,6 @@ pythonpath = [
 "rdasub" = "rda_python_miscs.rdasub:main"
 "gdexsub" = "rda_python_miscs.rdasub:main"
 "pgwget" = "rda_python_miscs.pgwget:main"
-"rdals" = "rda_python_miscs.rdals:main"
 "gdexls" = "rda_python_miscs.gdexls:main"
 "rdaps" = "rda_python_miscs.rdaps:main"
 "gdexps" = "rda_python_miscs.rdaps:main"
@@ -46,10 +45,10 @@ pythonpath = [
 "gdexzip" = "rda_python_miscs.rdazip:main"
 "rdaown" = "rda_python_miscs.rdaown:main"
 "gdexown" = "rda_python_miscs.rdaown:main"
-"rdacp.py" = "rda_python_miscs.rdacp:main"
-"gdexcp.py" = "rda_python_miscs.rdacp:main"
-"rdakill.py" = "rda_python_miscs.rdakill:main"
-"gdexkill.py" = "rda_python_miscs.rdakill:main"
-"rdamod.py" = "rda_python_miscs.rdamod:main"
-"gdexmod.py" = "rda_python_miscs.rdamod:main"
+"setuid_rdacp" = "rda_python_miscs.rdacp:main"
+"setuid_gdexcp" = "rda_python_miscs.rdacp:main"
+"setuid_rdakill" = "rda_python_miscs.rdakill:main"
+"setuid_gdexkill" = "rda_python_miscs.rdakill:main"
+"setuid_rdamod" = "rda_python_miscs.rdamod:main"
+"setuid_gdexmod" = "rda_python_miscs.rdamod:main"
 "pgrst" = "rda_python_miscs.pg_rst:main"

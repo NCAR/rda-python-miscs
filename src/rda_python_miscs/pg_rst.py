@@ -1237,6 +1237,11 @@ class PgRST(PgFile, PgUtil):
 
 def main():
     """Entry point for command-line usage of pg_rst.py."""
+    import sys
+    if len(sys.argv) == 1 or any(a in sys.argv[1:] for a in ('-h', '--help', '-?')):
+        pg = PgRST()
+        pg.show_usage("pg_rst")
+
     parser = argparse.ArgumentParser(
         description=(
             "Convert a .usg help document to reStructuredText (.rst) using RST templates. "

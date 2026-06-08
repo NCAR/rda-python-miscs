@@ -233,7 +233,9 @@ class RdaCp(PgFile):
 # main function to execute this script
 def main():
    """Entry point: instantiate RdaCp, parse arguments, run, and exit."""
+   from rda_python_setuid.setup_guide import show_setup_guide
    object = RdaCp()
+   show_setup_guide(object, 'rda_python_miscs', ['rdacp', 'rdakill', 'rdamod'])
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

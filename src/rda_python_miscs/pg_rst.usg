@@ -1,0 +1,60 @@
+ Convert a text-based program usage document (.usg file) into reStructuredText
+ (.rst) files using RST template files, for publication to readthedocs.io via
+ a gdex-docs-* GitHub repository.
+
+ OPTS and ALIAS are loaded from rda_python_<docname>/<docname>.py (or from
+ --pyfile if given): the module is searched first for a class that carries
+ both as class attributes, then for module-level OPTS/ALIAS variables.
+
+ Usage: pgrst [docname] [-u FILE] [-p FILE] [-d DIR] [-h]
+
+      - docname
+          Short document name, e.g. 'dsarch' or 'dsupdt'.  Required unless
+          --usgfile is given, in which case the name is derived from the .usg
+          filename by removing the extension.
+
+      - Option -u or --usgfile FILE
+          Path to the .usg source document.  When given, docname is derived
+          from the filename by removing the .usg extension, and the source
+          directory is set to the directory containing the file.
+
+      - Option -p or --pyfile FILE
+          Path to a Python file that defines OPTS (and optionally ALIAS) either
+          at module level or as class attributes.  When given, the default
+          module-import convention (rda_python_<docname>/<docname>.py) is
+          bypassed.
+
+      - Option -d or --docdir DIR
+          Root directory under which the per-document RST output is written.
+          Defaults to the current working directory.
+
+      - Option -h, display this help document.
+
+ The .usg source document must be structured with a summary paragraph at the
+ top, followed by option descriptions and an examples section.  OPTS defines
+ the option types (mode, single-value, multi-value, or action) used to
+ categorise each option in the RST output.
+
+ Output files are written to DOCDIR using RST template files bundled with
+ this package under rda_python_miscs/rst_templates/.
+
+ Examples:
+
+   1. Convert dsarch.usg to RST using the default module-import convention.
+      OPTS and ALIAS are loaded from rda_python_dsarch/dsarch.py.
+      RST output is written under the current directory:
+
+         pgrst dsarch
+
+   2. Convert dsarch.usg from a specific path, writing RST to /tmp/docs/:
+
+         pgrst dsarch -u /path/to/dsarch.usg -d /tmp/docs/
+
+   3. Convert using a custom Python file for OPTS/ALIAS instead of the
+      installed package module:
+
+         pgrst dsarch -p /path/to/dsarch.py
+
+   4. Derive the document name from the .usg filename (no positional arg):
+
+         pgrst -u /path/to/dsupdt.usg -d /tmp/docs/
