@@ -13,21 +13,21 @@ The package provides two categories of programs:
 |---------|-------|-------------|
 | `bashqsub` | | Submit a job as a bash batch job on a PBS node via qsub |
 | `tcshqsub` | | Submit a job as a tcsh batch job on a PBS node via qsub |
-| `rdasub` | `gdexsub` | Submit a command as a nohup background process on the local machine |
+| `gdexsub` | `rdasub` | Submit a command as a nohup background process on the local machine |
 | `pgwget` | | Download remote files by root name pattern, combining downloaded parts into a single file |
 | `gdexls` | | List local files and directories with matching metadata from the GDEX database |
-| `rdaps` | `gdexps` | Show process status for local or PBS batch processes, with filtering by PID, owner, or name |
-| `rdazip` | `gdexzip` | Compress or uncompress files using a supported format |
-| `rdaown` | `gdexown` | Change ownership of files and directories to rdadata (must be run as root) |
+| `gdexps` | `rdaps` | Show process status for local or PBS batch processes, with filtering by PID, owner, or name |
+| `gdexzip` | `rdazip` | Compress or uncompress files using a supported format |
+| `gdexown` | `rdaown` | Change ownership of files and directories to gdexdata (must be run as root) |
 | `pgrst` | | Convert .usg files to RST and push to gdex-docs-* repos on GitHub for readthedocs.io |
 
 **Run as gdexdata via setuid (requires setup below):**
 
 | Command | Alias | Connector script | Description |
 |---------|-------|-----------------|-------------|
-| `rdacp` | `gdexcp` | `setuid_rdacp` / `setuid_gdexcp` | Copy files and directories across local, remote, Object Store, or Globus endpoints |
-| `rdakill` | `gdexkill` | `setuid_rdakill` / `setuid_gdexkill` | Kill local processes and their children, or cancel PBS batch jobs |
-| `rdamod` | `gdexmod` | `setuid_rdamod` / `setuid_gdexmod` | Change permission modes for files and directories owned by rdadata |
+| `gdexcp` | `rdacp` | `setuid_gdexcp` / `setuid_rdacp` | Copy files and directories across local, remote, Object Store, or Globus endpoints |
+| `gdexkill` | `rdakill` | `setuid_gdexkill` / `setuid_rdakill` | Kill local processes and their children, or cancel PBS batch jobs |
+| `gdexmod` | `rdamod` | `setuid_gdexmod` / `setuid_rdamod` | Change permission modes for files and directories owned by gdexdata |
 
 ## Environment setup
 
@@ -86,7 +86,7 @@ pip install rda_python_miscs
 
 ## Setuid Setup
 
-The setuid programs (`rdacp`, `rdakill`, `rdamod` and their `gdex*` aliases)
+The setuid programs (`gdexcp`, `gdexkill`, `gdexmod` and their `rda*` aliases)
 execute as the common user `PGLOG['COMMONUSER']` (default `gdexdata`) via
 the `rda_python_setuid` mechanism, which is pulled in automatically as a
 dependency.  After `pip install` above, choose one of the wiring options

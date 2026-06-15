@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdaown
+#     Title: gdexown
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
-#   Purpose: change file/directory ownership to 'rdadata' in given one or multiple
+#   Purpose: change file/directory ownership to 'gdexdata' in given one or multiple
 #            local directories that are owned by decs specialists. it needs
 #            super user privilege to execute. 
 #    Github: https://github.com/NCAR/rda-python-miscs.git
@@ -17,16 +17,16 @@ import glob
 from os import path as op
 from rda_python_common.pg_file import PgFile
 
-class RdaOwn(PgFile):
-   """Change file and directory ownership to 'rdadata' for a given path list.
+class GdexOwn(PgFile):
+   """Change file and directory ownership to 'gdexdata' for a given path list.
 
    Must be run as root.  Only items currently owned by DECS specialists are
-   changed; items already owned by 'rdadata' are silently skipped.  A leading
+   changed; items already owned by 'gdexdata' are silently skipped.  A leading
    letter ('D' or 'F') is logged with each changed path to indicate its type.
    """
 
    def __init__(self):
-      """Initialize RdaOwn with default ownership-change options and runtime state."""
+      """Initialize GdexOwn with default ownership-change options and runtime state."""
       super().__init__()
       self.RDAOWN = {
          'd': 0,     # 1 to change directory owner
@@ -56,8 +56,8 @@ class RdaOwn(PgFile):
       """
       argv = sys.argv[1:]
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdaown.log"   # set different log file
-      self.cmdlog("rdaown {} ({})".format(' '.join(argv), self.OINFO['curdir']))
+      self.PGLOG['LOGFILE'] = "gdexown.log"   # set different log file
+      self.cmdlog("gdexown {} ({})".format(' '.join(argv), self.OINFO['curdir']))
       option = defopt = 'l'
       for arg in argv:
          ms = re.match(r'-(\w+)$', arg)
@@ -75,9 +75,9 @@ class RdaOwn(PgFile):
          else:
             self.OINFO['files'].append(arg)
             defopt = None
-      if self.RDAOWN['h'] or not self.OINFO['files']: self.show_usage("rdaown")   
+      if self.RDAOWN['h'] or not self.OINFO['files']: self.show_usage("gdexown")
       if self.PGLOG['CURUID'] != "root":
-         self.pglog(self.PGLOG['CURUID'] + ": you must execute 'rdaown' as 'root'!", self.LGEREX)
+         self.pglog(self.PGLOG['CURUID'] + ": you must execute 'gdexown' as 'root'!", self.LGEREX)
       if not (self.RDAOWN['d'] or self.RDAOWN['f']):
          self.RDAOWN['d'] = self.RDAOWN['f'] = 1   # list both directories and files as default
       if not self.RDAOWN['R'] and self.RDAOWN['r']: self.RDAOWN['R'] = 1000
@@ -152,11 +152,11 @@ class RdaOwn(PgFile):
    
    # change owner for a single file or directory
    def change_owner(self, file, info):
-      """Change ownership of one file or directory to 'rdadata' using chown.
+      """Change ownership of one file or directory to 'gdexdata' using chown.
 
-      Skips the item if it is already owned by 'rdadata' or if the current owner
+      Skips the item if it is already owned by 'gdexdata' or if the current owner
       is not a registered DECS specialist in the dssgrp table.  Logs the result
-      as 'owner => rdadata' on success or an error message on failure.  Updates
+      as 'owner => gdexdata' on success or an error message on failure.  Updates
       OINFO['fcnt'] for files and OINFO['dcnt'] for directories on success.
 
       Args:
@@ -174,23 +174,23 @@ class RdaOwn(PgFile):
       else:
          if not self.RDAOWN['d']: return 0
          fname = "D" + fname
-      if info['logname'] == "rdadata": return 0
+      if info['logname'] == "gdexdata": return 0
       if not self.pgget("dssgrp", "", "logname = '{}'".format(info['logname']), self.LGEREX):
          return self.pglog("{}: owner {} not a DECS Specialist!".format(fname, info['logname']), self.LOGERR)
-      if self.pgsystem("su root -c 'chown rdadata {}'".format(file), self.LOGWRN, 4):
-         self.pglog("{}: {} => rdadata".format(fname, info['logname']), self.LOGWRN)
+      if self.pgsystem("su root -c 'chown gdexdata {}'".format(file), self.LOGWRN, 4):
+         self.pglog("{}: {} => gdexdata".format(fname, info['logname']), self.LOGWRN)
          if info['isfile']:
             self.OINFO['fcnt'] += 1
             return 1
          else:
             self.OINFO['dcnt'] += 1
             return 0
-      return self.pglog("{}: Error change owner {} to rdadata".format(fname, info['logname']), self.LOGERR)
+      return self.pglog("{}: Error change owner {} to gdexdata".format(fname, info['logname']), self.LOGERR)
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaOwn, parse arguments, run, and exit."""
-   object = RdaOwn()
+   """Entry point: instantiate GdexOwn, parse arguments, run, and exit."""
+   object = GdexOwn()
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

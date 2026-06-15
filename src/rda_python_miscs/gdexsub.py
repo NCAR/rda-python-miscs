@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdasub
+#     Title: gdexsub
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 03/31/2021
 #            2025-03-10 transferred to package rda_python_miscs from
@@ -15,7 +15,7 @@ import re
 import time
 from rda_python_common.pg_file import PgFile
 
-class RdaSub(PgFile):
+class GdexSub(PgFile):
    """Submit a command as a nohup background process on the local machine.
 
    Wraps the command in 'nohup ... > /dev/null 2>&1 &' and logs the resulting
@@ -24,7 +24,7 @@ class RdaSub(PgFile):
    """
 
    def __init__(self):
-      """Initialize RdaSub with empty customized options and argument string."""
+      """Initialize GdexSub with empty customized options and argument string."""
       super().__init__()
       self.coptions = {'cmd': None, 'cwd': None, 'env': None}   # cmd: command to run,
                                                                   # cwd: working directory,
@@ -41,7 +41,7 @@ class RdaSub(PgFile):
       arguments are given; errors if -cmd is not provided.  Arguments containing
       spaces are automatically quoted.
       """
-      aname = 'rdasub'
+      aname = 'gdexsub'
       self.set_help_path(__file__)
       copts = '|'.join(self.coptions)
       option = None
@@ -139,8 +139,8 @@ class RdaSub(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaSub, parse arguments, run, and exit."""
-   object = RdaSub()
+   """Entry point: instantiate GdexSub, parse arguments, run, and exit."""
+   object = GdexSub()
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

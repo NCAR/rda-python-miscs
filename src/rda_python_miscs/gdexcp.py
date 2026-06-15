@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdacp
+#     Title: gdexcp
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
-#   Purpose: copy files locally and remotely by 'rdadata'
+#   Purpose: copy files locally and remotely by 'gdexdata'
 #    Github: https://github.com/NCAR/rda-python-miscs.git
 ##################################################################################
 import re
@@ -14,16 +14,16 @@ import sys
 from os import path as op
 from rda_python_common.pg_file import PgFile
 
-class RdaCp(PgFile):
-   """Copy files and directories locally or between remote hosts via 'rdadata'.
+class GdexCp(PgFile):
+   """Copy files and directories locally or between remote hosts via 'gdexdata'.
 
    Supports local-to-local, local-to-remote, remote-to-local, and Object Store /
-   Globus transfers.  Target files are owned by 'rdadata' and created with
+   Globus transfers.  Target files are owned by 'gdexdata' and created with
    configurable permission modes.  Recursive copying is controlled by -r / -R.
    """
 
    def __init__(self):
-      """Initialize RdaCp with default copy options and runtime state."""
+      """Initialize GdexCp with default copy options and runtime state."""
       super().__init__()
       self.RDACP = {
          'fh': None,   # from host name, default to localhost
@@ -64,8 +64,8 @@ class RdaCp(PgFile):
       argv = sys.argv[1:]
       self.set_suid(self.PGLOG['EUID'])
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdacp.log"   # set different log file
-      self.cmdlog("rdacp {} ({})".format(' '.join(argv), self.CINFO['curdir']))
+      self.PGLOG['LOGFILE'] = "gdexcp.log"   # set different log file
+      self.cmdlog("gdexcp {} ({})".format(' '.join(argv), self.CINFO['curdir']))
       defopt = option = 'f'
       for arg in argv:
          if re.match(r'-(h|-help)$', arg, re.I):
@@ -95,7 +95,7 @@ class RdaCp(PgFile):
                elif option == 'fh':
                   self.CINFO['fhost'] = arg + '-'
             option = defopt
-      if dohelp or not self.RDACP['f']: self.show_usage("rdacp")
+      if dohelp or not self.RDACP['f']: self.show_usage("gdexcp")
    
    # function to start actions
    def start_actions(self):
@@ -106,7 +106,7 @@ class RdaCp(PgFile):
       when specified, then calls copy_top_list.  Logs a summary count on completion.
       """
       self.dssdb_dbname()
-      self.validate_decs_group('rdacp', self.PGLOG['CURUID'], 1)
+      self.validate_decs_group('gdexcp', self.PGLOG['CURUID'], 1)
       if not self.RDACP['R'] and self.RDACP['r']: self.RDACP['R'] = 1000
       if not self.RDACP['t']:
          self.CINFO['tpath'] = self.RDACP['t'] = "."
@@ -232,10 +232,10 @@ class RdaCp(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaCp, parse arguments, run, and exit."""
+   """Entry point: instantiate GdexCp, parse arguments, run, and exit."""
    from rda_python_setuid.setup_guide import show_setup_guide
-   object = RdaCp()
-   show_setup_guide(object, 'rda_python_miscs', ['rdacp', 'rdakill', 'rdamod'])
+   object = GdexCp()
+   show_setup_guide(object, 'rda_python_miscs', ['gdexcp', 'gdexkill', 'gdexmod'])
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdaps
+#     Title: gdexps
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
@@ -13,7 +13,7 @@ import os
 import sys
 from rda_python_common.pg_file import PgFile
 
-class RdaPs(PgFile):
+class GdexPs(PgFile):
    """Show process status for local or PBS batch processes on any accessible host.
 
    Wraps the system 'ps' command for local processes and 'qstat' for PBS batch
@@ -22,7 +22,7 @@ class RdaPs(PgFile):
    """
 
    def __init__(self):
-      """Initialize RdaPs with default process query options."""
+      """Initialize GdexPs with default process query options."""
       super().__init__()
       self.RDAPS = {
          'a' : None,   # application name
@@ -44,8 +44,8 @@ class RdaPs(PgFile):
       argv = sys.argv[1:]
       self.set_suid(self.PGLOG['EUID'])
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdaps.log"   # set different log file
-      self.cmdlog("rdaps {}".format(' '.join(argv)))
+      self.PGLOG['LOGFILE'] = "gdexps.log"   # set different log file
+      self.cmdlog("gdexps {}".format(' '.join(argv)))
       for arg in argv:
          ms = re.match(r'-([ahpPu])$', arg)
          if ms:
@@ -69,7 +69,7 @@ class RdaPs(PgFile):
                optcnt += 1
             else:
                self.pglog(arg + ": Value passed in without Option", self.LGEREX)
-      if not optcnt: self.show_usage("rdaps")
+      if not optcnt: self.show_usage("gdexps")
    
    # function to start actions
    def start_actions(self):
@@ -159,8 +159,8 @@ class RdaPs(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaPs, parse arguments, run, and exit."""
-   object = RdaPs()
+   """Entry point: instantiate GdexPs, parse arguments, run, and exit."""
+   object = GdexPs()
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

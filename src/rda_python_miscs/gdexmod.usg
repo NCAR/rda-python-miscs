@@ -1,11 +1,11 @@
 
- Change permission modes for files and directories owned by 'rdadata'.  Only
- items owned by 'rdadata' are changed; items with a different owner are logged
+ Change permission modes for files and directories owned by 'gdexdata'.  Only
+ items owned by 'gdexdata' are changed; items with a different owner are logged
  as errors.  Items already at the target mode are silently skipped.  A leading
  letter is displayed in front of each changed path to indicate its type: 'D'
  for a directory and 'F' for a file.
 
- Usage: rdamod [-d] [-f] [-D DirectoryMode] [-F FileMode] [-h] [-r]  \
+ Usage: gdexmod [-d] [-f] [-D DirectoryMode] [-F FileMode] [-h] [-r]  \
                [-R RecursiveLevel] Directory/File List
 
       - Option -d, change directory modes only.  Both directories and files are
@@ -33,39 +33,39 @@
           in the current directory.
 
   This utility can be run from any directory.  No mode is changed if all
-  matched items are already at the target mode or if none are owned by 'rdadata'.
+  matched items are already at the target mode or if none are owned by 'gdexdata'.
 
   Examples:
 
     1. Change into the dataset home directory and change modes of all
        immediate contents:
 
-          cd /PathTo/ds277.6
-          rdamod ./
+          cd /PathTo/d277006
+          gdexmod ./
 
        Add -r to recurse into sub-directories:
 
-          rdamod -r ./
+          gdexmod -r ./
 
     2. Pass an absolute path with a trailing '/' to process the directory's
        contents (the directory entry itself is not changed):
 
-          rdamod /PathTo/ds277.6/
+          gdexmod /PathTo/d277006/
 
        Without the trailing '/', the directory entry itself is also changed
        unless -r or -R is given:
 
-          rdamod /PathTo/ds277.6
+          gdexmod /PathTo/d277006
 
     3. Use a relative path from a neighbouring directory:
 
-          rdamod ../ds277.6/
-          rdamod ../ds277.6/*
+          gdexmod ../d277006/
+          gdexmod ../d277006/*
 
     4. Change file modes only, with a non-default target mode:
 
-          rdamod -f -F 660 -r /PathTo/ds277.6/
+          gdexmod -f -F 660 -r /PathTo/d277006/
 
     5. Change directory modes only, recursively:
 
-          rdamod -d -r /PathTo/ds277.6/
+          gdexmod -d -r /PathTo/d277006/

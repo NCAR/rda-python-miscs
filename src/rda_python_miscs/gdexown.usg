@@ -1,11 +1,11 @@
 
- Change ownership of files and directories to 'rdadata'.  Must be run as root.
+ Change ownership of files and directories to 'gdexdata'.  Must be run as root.
  Only items currently owned by DECS specialists are changed; items already owned
- by 'rdadata' or owned by non-specialists are skipped.  A leading letter is
+ by 'gdexdata' or owned by non-specialists are skipped.  A leading letter is
  displayed in front of each changed path to indicate its type: 'D' for a
  directory and 'F' for a file.
 
- Usage: rdaown [-d] [-f] [-h] [-r] [-R RecursiveLevel] Directory/File List
+ Usage: gdexown [-d] [-f] [-h] [-r] [-R RecursiveLevel] Directory/File List
 
       - Option -d, change directory ownership only.  Both directories and files
           are processed by default; this option suppresses file ownership changes;
@@ -25,7 +25,7 @@
           in the current directory.
 
   This utility can be run from any directory.  No ownership is changed if all
-  matched items are already owned by 'rdadata' or if none of their current owners
+  matched items are already owned by 'gdexdata' or if none of their current owners
   are registered DECS specialists.
 
   Examples:
@@ -33,28 +33,28 @@
     1. Change into the dataset home directory and change ownership of all
        immediate contents:
 
-          cd /PathTo/ds277.6
-          rdaown ./
+          cd /PathTo/d277006
+          gdexown ./
 
        Add -r to recurse into sub-directories:
 
-          rdaown -r ./
+          gdexown -r ./
 
     2. Pass an absolute path with a trailing '/' to process the directory's
        contents (the directory entry itself is not changed):
 
-          rdaown /PathTo/ds277.6/
+          gdexown /PathTo/d277006/
 
        Without the trailing '/', the directory entry itself is also changed
        unless -r or -R is given:
 
-          rdaown /PathTo/ds277.6
+          gdexown /PathTo/d277006
 
     3. Use a relative path from a neighbouring directory:
 
-          rdaown ../ds277.6/
-          rdaown ../ds277.6/*
+          gdexown ../d277006/
+          gdexown ../d277006/*
 
     4. Change ownership of files only, recursively:
 
-          rdaown -f -r /PathTo/ds277.6/
+          gdexown -f -r /PathTo/d277006/
