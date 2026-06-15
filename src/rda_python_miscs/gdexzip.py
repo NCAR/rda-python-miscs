@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdazip
+#     Title: gdexzip
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-17 transferred to package rda_python_miscs from
@@ -14,7 +14,7 @@ import os
 import sys
 from rda_python_common.pg_file import PgFile
 
-class RdaZip(PgFile):
+class GdexZip(PgFile):
    """Compress or uncompress files using a supported format (gz, Z, bz2, zip).
 
    When a target format is specified via -f, files are compressed to that format.
@@ -23,7 +23,7 @@ class RdaZip(PgFile):
    """
 
    def __init__(self):
-      """Initialize RdaZip with default action (uncompress), no format, and empty file list."""
+      """Initialize GdexZip with default action (uncompress), no format, and empty file list."""
       super().__init__()
       self.action = 0      # 0 - uncompress, 1 - compress to self.format
       self.format = None   # target compression format (gz, Z, bz2, zip)
@@ -40,8 +40,8 @@ class RdaZip(PgFile):
       """
       argv = sys.argv[1:]
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdazip.log"   # set different log file
-      self.cmdlog("rdazip {}".format(' '.join(argv)))
+      self.PGLOG['LOGFILE'] = "gdexzip.log"   # set different log file
+      self.cmdlog("gdexzip {}".format(' '.join(argv)))
       option = None
       for arg in argv:
          ms = re.match(r'-(\w+)$', arg)
@@ -61,7 +61,7 @@ class RdaZip(PgFile):
          else:
             if not os.path.isfile(arg): self.pglog(arg + ": file not exists", self.LGEREX)
             self.files.append(arg)
-      if not self.files: self.show_usage("rdazip")
+      if not self.files: self.show_usage("gdexzip")
 
    # function to start actions
    def start_actions(self):
@@ -72,8 +72,8 @@ class RdaZip(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaZip, parse arguments, run, and exit."""
-   object = RdaZip()
+   """Entry point: instantiate GdexZip, parse arguments, run, and exit."""
+   object = GdexZip()
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

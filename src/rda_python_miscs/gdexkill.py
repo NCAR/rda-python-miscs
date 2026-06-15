@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdakill
+#     Title: gdexkill
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
 #   Purpose: kill a local or batch process and its child processes for a given
-#            running process ID by 'rdadata'
+#            running process ID by 'gdexdata'
 #    Github: https://github.com/NCAR/rda-python-miscs.git
 ##################################################################################
 import re
@@ -14,7 +14,7 @@ import sys
 import time
 from rda_python_common.pg_file import PgFile
 
-class RdaKill(PgFile):
+class GdexKill(PgFile):
    """Kill local processes or PBS batch jobs by process ID, parent PID, or status.
 
    For local processes, sends SIGKILL (-9) to the matched process and all its
@@ -24,7 +24,7 @@ class RdaKill(PgFile):
    """
 
    def __init__(self):
-      """Initialize RdaKill with default kill options."""
+      """Initialize GdexKill with default kill options."""
       super().__init__()
       self.RDAKILL = {
          'a': None,    # application name
@@ -52,8 +52,8 @@ class RdaKill(PgFile):
       self.dssdb_dbname()
       self.set_suid(self.PGLOG['EUID'])
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdakill.log"   # set different log file
-      self.cmdlog("rdakill {}".format(' '.join(argv)))
+      self.PGLOG['LOGFILE'] = "gdexkill.log"   # set different log file
+      self.cmdlog("gdexkill {}".format(' '.join(argv)))
       for arg in argv:
          ms = re.match(r'-([ahpPqsu])$', arg)
          if ms:
@@ -79,7 +79,7 @@ class RdaKill(PgFile):
                optcnt += 1
             else:
                self.pglog(arg + ": pass in value without Option", self.LGEREX)
-      if not optcnt: self.show_usage("rdakill")
+      if not optcnt: self.show_usage("gdexkill")
    
    # function to start actions
    def start_actions(self):
@@ -257,10 +257,10 @@ class RdaKill(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaKill, parse arguments, run, and exit."""
+   """Entry point: instantiate GdexKill, parse arguments, run, and exit."""
    from rda_python_setuid.setup_guide import show_setup_guide
-   object = RdaKill()
-   show_setup_guide(object, 'rda_python_miscs', ['rdacp', 'rdakill', 'rdamod'])
+   object = GdexKill()
+   show_setup_guide(object, 'rda_python_miscs', ['gdexcp', 'gdexkill', 'gdexmod'])
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

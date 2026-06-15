@@ -1,10 +1,10 @@
 
  Copy files and directories to a target location.  Source and target may each
  reside on the local host, a remote host, an Object Store bucket, or a Globus
- endpoint.  Target files are owned by 'rdadata' and created with configurable
+ endpoint.  Target files are owned by 'gdexdata' and created with configurable
  permission modes.
 
- Usage: rdacp [-f] FromDirectories/Files [-t ToDirectory/FileName]   \
+ Usage: gdexcp [-f] FromDirectories/Files [-t ToDirectory/FileName]   \
               [-fh FromHostName] [-th ToHostName]                     \
               [-fb FromBucket] [-tb ToBucket]                         \
               [-fp FromGlobusEndpoint] [-tp ToGlobusEndpoint]         \
@@ -14,7 +14,7 @@
           default option, so paths may be given without the -f flag.
           Shell wildcards are supported.  Use './' or '*' to copy everything
           in the current directory.  Source paths must be readable by user
-          'rdadata'; rdacp will attempt to fix the mode if they are not;
+          'gdexdata'; gdexcp will attempt to fix the mode if they are not;
 
       - Option -t, target directory or file name.  Defaults to '.' (current
           directory).  Multiple source files cannot be copied to a single
@@ -57,21 +57,21 @@
     1. Copy all files and subdirectories under the current directory to a
        remote host:
 
-          rdacp -r -f * -t /PathTo/d277006/ -th castle
+          gdexcp -r -f * -t /PathTo/d277006/ -th castle
 
     2. Copy the contents of a specific local directory to a remote location
        (trailing '/' on source omits the directory entry itself):
 
-          rdacp -r -f /PathTo/DirectoryName/ -t /PathTo/d277006/ -th castle
+          gdexcp -r -f /PathTo/DirectoryName/ -t /PathTo/d277006/ -th castle
 
        Without the trailing '/', DirectoryName itself is also copied:
 
-          rdacp -r -f /PathTo/DirectoryName -t /PathTo/d277006/ -th castle
+          gdexcp -r -f /PathTo/DirectoryName -t /PathTo/d277006/ -th castle
 
     3. Copy a single file to an Object Store bucket:
 
-          rdacp -f /PathTo/myfile.nc -tb my-bucket -t myfile.nc
+          gdexcp -f /PathTo/myfile.nc -tb my-bucket -t myfile.nc
 
     4. Copy files from a remote host to the local current directory:
 
-          rdacp -fh castle -f /PathTo/d277006/myfile.nc
+          gdexcp -fh castle -f /PathTo/d277006/myfile.nc

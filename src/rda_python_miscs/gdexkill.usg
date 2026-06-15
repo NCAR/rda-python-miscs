@@ -3,7 +3,7 @@
  other filter criteria; or cancel one or more PBS batch jobs by job ID or by
  job status.  For PBS operations the -h option must specify the PBS node name.
 
- Usage: rdakill [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
+ Usage: gdexkill [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
                 [-s BatchStatus] [-q BatchQueue] [-r]               \
                 [-u ProcessOwner] [-a ApplicationName]
 
@@ -36,31 +36,31 @@
           Without this option all users are included;
 
   For local processes, all child processes are also terminated recursively.
-  Usage is displayed if rdakill is run without any options or arguments.
+  Usage is displayed if gdexkill is run without any options or arguments.
 
   Examples:
 
     1. Kill a local process by PID:
 
-          rdakill -p 13199
-          rdakill 13199
+          gdexkill -p 13199
+          gdexkill 13199
 
     2. Kill a local process by PID and verify it matches a specific application:
 
-          rdakill -p 13199 -a dsrqst
+          gdexkill -p 13199 -a dsrqst
 
     3. Kill all local processes (and their children) owned by a user:
 
-          rdakill -u zji -a dsrqst
+          gdexkill -u zji -a dsrqst
 
     4. Kill a PBS batch job by job ID:
 
-          rdakill -h casper-pbs -p 334323
+          gdexkill -h casper-pbs -p 334323
 
     5. Kill all running PBS batch jobs for a user in the default queue:
 
-          rdakill -h casper-pbs -s RUN -u zji
+          gdexkill -h casper-pbs -s RUN -u zji
 
     6. Kill all pending PBS batch jobs in a specific queue:
 
-          rdakill -h casper-pbs -s PEND -q gdex
+          gdexkill -h casper-pbs -s PEND -q gdex

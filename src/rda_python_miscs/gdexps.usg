@@ -4,7 +4,7 @@
  a hostname, 'ps' is run on the local machine.  When the hostname matches the
  PBS node name, 'qstat' is used instead.
 
- Usage: rdaps [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
+ Usage: gdexps [-h HostName] [-p ProcessID] [-P ParentProcessID]  \
               [-u ProcessOwner] [-a ApplicationName]
 
       - Option -a, filter results by application (command) name.  For local
@@ -31,25 +31,25 @@
 
     1. Check a local process by PID (with or without the -p flag):
 
-          rdaps -p 13199
-          rdaps 13199
+          gdexps -p 13199
+          gdexps 13199
 
     2. Filter by PID and application name on the local host:
 
-          rdaps -p 13199 -a dsrqst
+          gdexps -p 13199 -a dsrqst
 
     3. List all local processes owned by a specific user:
 
-          rdaps -u zji
+          gdexps -u zji
 
     4. Query a PBS batch job by job ID:
 
-          rdaps -h casper-pbs -p 334323
+          gdexps -h casper-pbs -p 334323
 
     5. List all PBS batch jobs for a user:
 
-          rdaps -h casper-pbs -u zji
+          gdexps -h casper-pbs -u zji
 
     6. List all PBS batch jobs for a user filtered by job name:
 
-          rdaps -h casper-pbs -u zji -a dsrqst
+          gdexps -h casper-pbs -u zji -a dsrqst

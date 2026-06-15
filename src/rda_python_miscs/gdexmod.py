@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 ##################################################################################
-#     Title: rdamod
+#     Title: gdexmod
 #    Author: Zaihua Ji, zji@ucar.edu
 #      Date: 10/24/2020
 #            2025-03-10 transferred to package rda_python_miscs from
 #            https://github.com/NCAR/rda-utility-programs.git
 #   Purpose: change file/directory modes in given one or multiple local directories
-#            owned by 'rdadata'
+#            owned by 'gdexdata'
 #    Github: https://github.com/NCAR/rda-python-miscs.git
 ##################################################################################
 import re
@@ -15,17 +15,17 @@ import sys
 from os import path as op
 from rda_python_common.pg_file import PgFile
 
-class RdaMod(PgFile):
-   """Change file and directory permission modes for paths owned by 'rdadata'.
+class GdexMod(PgFile):
+   """Change file and directory permission modes for paths owned by 'gdexdata'.
 
-   Only items owned by 'rdadata' are changed; items with a different owner are
+   Only items owned by 'gdexdata' are changed; items with a different owner are
    logged as errors.  Items already at the target mode are silently skipped.
    A leading letter ('D' or 'F') is logged with each changed path to indicate
    its type.
    """
 
    def __init__(self):
-      """Initialize RdaMod with default mode-change options and runtime state."""
+      """Initialize GdexMod with default mode-change options and runtime state."""
       super().__init__()
       self.RDAMOD = {
          'd': 0,     # 1 to change directory mode
@@ -55,9 +55,9 @@ class RdaMod(PgFile):
       """
       self.set_suid(self.PGLOG['EUID'])
       self.set_help_path(__file__)
-      self.PGLOG['LOGFILE'] = "rdamod.log"   # set different log file
+      self.PGLOG['LOGFILE'] = "gdexmod.log"   # set different log file
       argv = sys.argv[1:]
-      self.cmdlog("rdamod {} ({})".format(' '.join(argv), self.MINFO['curdir']))
+      self.cmdlog("gdexmod {} ({})".format(' '.join(argv), self.MINFO['curdir']))
       option = defopt = 'l'
       for arg in argv:
          ms = re.match(r'-(\w)$', arg)
@@ -80,7 +80,7 @@ class RdaMod(PgFile):
             else:
                self.RDAMOD[option] = arg
             option = defopt
-      if self.RDAMOD['h'] or not self.MINFO['files']: self.show_usage("rdamod")
+      if self.RDAMOD['h'] or not self.MINFO['files']: self.show_usage("gdexmod")
 
    # function to start actions
    def start_actions(self):
@@ -89,7 +89,7 @@ class RdaMod(PgFile):
       if not (self.RDAMOD['d'] or self.RDAMOD['f']):
          self.RDAMOD['d'] = self.RDAMOD['f'] = 1   # both directories and files as default
       if not self.RDAMOD['R'] and self.RDAMOD['r']: self.RDAMOD['R'] = 1000
-      self.validate_decs_group('rdamod', self.PGLOG['CURUID'], 1)   
+      self.validate_decs_group('gdexmod', self.PGLOG['CURUID'], 1)
       self.change_top_list(self.MINFO['files'])
       if (self.MINFO['dcnt'] + self.MINFO['fcnt']) > 1:
          msg = ''
@@ -159,7 +159,7 @@ class RdaMod(PgFile):
       """Change the permission mode of one file or directory.
 
       Skips the item if the -f/-d flag for its type is not set, if it is not
-      owned by 'rdadata', or if its current mode already matches the target.
+      owned by 'gdexdata', or if its current mode already matches the target.
       Logs the old-to-new mode transition on success or an error on owner mismatch.
       Updates MINFO['fcnt'] for files and MINFO['dcnt'] for directories on success.
 
@@ -180,8 +180,8 @@ class RdaMod(PgFile):
          if not self.RDAMOD['d']: return 0
          fname = "D" + fname
          mode = self.RDAMOD['D']
-      if info['logname'] != "rdadata":
-         return self.pglog("{}: owner {} not rdadata".format(fname, info['logname']), self.LOGERR)
+      if info['logname'] != "gdexdata":
+         return self.pglog("{}: owner {} not gdexdata".format(fname, info['logname']), self.LOGERR)
       if info['mode'] == mode: return 0   # no need change mode
       if self.set_local_mode(file, info['isfile'], mode, info['mode'], info['logname'], self.LOGWRN):
          if info['isfile']:
@@ -193,10 +193,10 @@ class RdaMod(PgFile):
 
 # main function to execute this script
 def main():
-   """Entry point: instantiate RdaMod, parse arguments, run, and exit."""
+   """Entry point: instantiate GdexMod, parse arguments, run, and exit."""
    from rda_python_setuid.setup_guide import show_setup_guide
-   object = RdaMod()
-   show_setup_guide(object, 'rda_python_miscs', ['rdacp', 'rdakill', 'rdamod'])
+   object = GdexMod()
+   show_setup_guide(object, 'rda_python_miscs', ['gdexcp', 'gdexkill', 'gdexmod'])
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)
