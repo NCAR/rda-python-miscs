@@ -36,6 +36,7 @@ class GdexCp(PgFile):
          't': None,    # to file name
          'r': 0,       # 1 if recursive all
          'R': 0,       # > 0 to set recursive limit
+         'o': 0,       # 1 to force a downloaded file owned by COMMONUSER; needs -fp
          'F': 0o664,   # to file mode, default to 664
          'D': 0o775,   # to directory mode, default to 775
       }
@@ -75,8 +76,8 @@ class GdexCp(PgFile):
          if ms:
             option = ms.group(1)
             if option not in self.RDACP: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if option == 'r':
-               self.RDACP['r'] = 1
+            if option in ('r', 'o'):
+               self.RDACP[option] = 1
                option = None
             continue
          if not option: self.pglog(arg + ": Value provided without option", self.LGEREX)
@@ -132,6 +133,8 @@ class GdexCp(PgFile):
          self.PGLOG['BACKUPEP'] = self.RDACP['fp']
       elif self.RDACP['tp']:
          self.PGLOG['BACKUPEP'] = self.RDACP['tp']
+      if self.RDACP['o'] and not self.RDACP['fp']:
+         self.pglog("-o: works only when source Globus endpoint -fp is provided", self.LGEREX)
       self.copy_top_list(self.RDACP['f'])
       hinfo = ''
       if self.RDACP['fh']: hinfo += " From " + self.RDACP['fh']
@@ -228,7 +231,35 @@ class GdexCp(PgFile):
             tofile = self.CINFO['tpath'] + '/'
       else:
          tofile = self.RDACP['t']
+      if self.RDACP['o']: return self.force_owner_copy(tofile, fromfile)
       return (1 if self.copy_gdex_file(tofile, fromfile, self.RDACP['th'], self.RDACP['fh'], self.LGWNEX) else 0)
+
+   # copy one file from a Globus endpoint and force COMMONUSER ownership
+   def force_owner_copy(self, tofile, fromfile):
+      """Download a Globus file via a tmp file so the final copy is owned by COMMONUSER.
+
+      A Globus endpoint dumps the local file owned by the endpoint's mapped user
+      rather than COMMONUSER ('gdexdata').  This downloads to a tmp file under
+      PGLOG['TMPPATH'], makes it group readable/writable as its owner via the
+      pgstart_<user> setuid wrapper, then copies it locally so the final file is
+      owned by COMMONUSER, and removes the tmp file.
+
+      Args:
+         tofile (str): Final local destination path.
+         fromfile (str): Source file path on the Globus endpoint.
+
+      Returns:
+         int: 1 if the file was copied successfully, 0 otherwise.
+      """
+      tmpfile = self.join_paths(self.PGLOG['TMPPATH'], "{}.{}".format(op.basename(fromfile), os.getpid()))
+      if not self.copy_gdex_file(tmpfile, fromfile, self.RDACP['th'], self.RDACP['fh'], self.LGWNEX): return 0
+      finfo = self.check_local_file(tmpfile, 2, self.LGWNEX)
+      owner = finfo['logname'] if finfo else None
+      if owner and owner != self.PGLOG['COMMONUSER']:
+         self.pgsystem(self.get_local_command("chmod g+rw " + tmpfile, owner), self.LGWNEX)
+      ret = self.copy_gdex_file(tofile, tmpfile, self.RDACP['th'], None, self.LGWNEX)
+      self.delete_local_file(tmpfile, self.LGWNEX)
+      return (1 if ret else 0)
 
 # main function to execute this script
 def main():

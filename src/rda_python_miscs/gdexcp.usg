@@ -8,7 +8,7 @@
               [-fh FromHostName] [-th ToHostName]                     \
               [-fb FromBucket] [-tb ToBucket]                         \
               [-fp FromGlobusEndpoint] [-tp ToGlobusEndpoint]         \
-              [-F FileMode] [-D DirectoryMode] [-r] [-R RecursiveLevel] [-h]
+              [-F FileMode] [-D DirectoryMode] [-r] [-R RecursiveLevel] [-o] [-h]
 
       - Option -f, source directories and/or files to copy.  This is the
           default option, so paths may be given without the -f flag.
@@ -46,6 +46,11 @@
       - Option -R RecursiveLevel, copy recursively up to the specified depth.
           -R 1 copies only the immediate contents of each source directory;
 
+      - Option -o, force downloaded files to be owned by 'gdexdata'.  A Globus
+          endpoint dumps the local file owned by the endpoint's mapped user; with
+          -o the file is downloaded to a tmp file, then copied locally so the
+          final file is owned by 'gdexdata'.  Only valid together with -fp;
+
       - Option -h, display this help document;
 
   This utility can be run from any directory.  Usage is displayed if no source
@@ -75,3 +80,8 @@
     4. Copy files from a remote host to the local current directory:
 
           gdexcp -fh castle -f /PathTo/d277006/myfile.nc
+
+    5. Download a file from a source Globus endpoint and force the local file to
+       be owned by 'gdexdata' (-o requires -fp):
+
+          gdexcp -fp gdex-quasar -f /d277006/myfile.nc -t /PathTo/myfile.nc -o
