@@ -133,8 +133,11 @@ class GdexCp(PgFile):
          self.PGLOG['BACKUPEP'] = self.RDACP['fp']
       elif self.RDACP['tp']:
          self.PGLOG['BACKUPEP'] = self.RDACP['tp']
-      if self.RDACP['o'] and not self.RDACP['fp']:
-         self.pglog("-o: works only when source Globus endpoint -fp is provided", self.LGEREX)
+      if self.RDACP['o']:
+         if not self.RDACP['fp']:
+            self.pglog("-o: works only when source Globus endpoint -fp is provided", self.LGEREX)
+         if self.RDACP['th'] or self.RDACP['tp'] or self.RDACP['tb']:
+            self.pglog("-o: works only for downloading to local files (no -th/-tp/-tb)", self.LGEREX)
       self.copy_top_list(self.RDACP['f'])
       hinfo = ''
       if self.RDACP['fh']: hinfo += " From " + self.RDACP['fh']
