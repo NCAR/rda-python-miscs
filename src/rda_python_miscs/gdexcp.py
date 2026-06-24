@@ -33,15 +33,21 @@ class GdexCp(PgFile):
          'fp': None,   # from Globus endpoint
          'tp': None,   # to Globus endpoint
          'f': [],      # from file names
+         'i': None,    # input file holding a list of from file names, one per line
          't': None,    # to file name
          'r': 0,       # 1 if recursive all
          'R': 0,       # > 0 to set recursive limit
+         'o': 0,       # 1 to force a downloaded file owned by COMMONUSER; needs -fp
+         'O': 0,       # 1 to override an existing target file of the same size
+         'm': 1,       # number of multiple processes to copy files in parallel
+         'd': 0,       # 1 to add a dscheck record for delayed PBS batch process
          'F': 0o664,   # to file mode, default to 664
          'D': 0o775,   # to directory mode, default to 775
       }
       self.CINFO = {
          'tcnt': 0,
          'htcnt': 0,
+         'pcnt': 0,      # count of dispatched child processes for option -m
          'cpflag': 0,    # 1 file only, 2 directory only, 3 both
          'cpstr': ['', 'Files', 'Directories', 'Files/Directories'],
          'fpath': None,
@@ -75,8 +81,8 @@ class GdexCp(PgFile):
          if ms:
             option = ms.group(1)
             if option not in self.RDACP: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if option == 'r':
-               self.RDACP['r'] = 1
+            if option in ('r', 'o', 'd', 'O'):
+               self.RDACP[option] = 1
                option = None
             continue
          if not option: self.pglog(arg + ": Value provided without option", self.LGEREX)
@@ -84,7 +90,7 @@ class GdexCp(PgFile):
             self.RDACP['f'].append(arg)
             defopt = None
          else:
-            if option == 'R':
+            if option in ('R', 'm'):
                self.RDACP[option] = int(arg)
             elif option in 'FD':
                self.RDACP[option] = self.base2int(arg, 8)
@@ -95,8 +101,29 @@ class GdexCp(PgFile):
                elif option == 'fh':
                   self.CINFO['fhost'] = arg + '-'
             option = defopt
+      if self.RDACP['i']: self.add_input_files(self.RDACP['i'])
       if dohelp or not self.RDACP['f']: self.show_usage("gdexcp")
-   
+
+   # read source paths from an input file and append them to the -f list
+   def add_input_files(self, infile):
+      """Append source paths read from an input file to the -f source list.
+
+      Each non-empty line in the input file is treated as one source path;
+      leading/trailing whitespace is stripped and lines starting with '#' are
+      ignored as comments.
+
+      Args:
+         infile (str): Path to the input file holding one source path per line.
+      """
+      finfo = self.check_local_file(infile, 0, self.LGWNEX)
+      if not finfo: self.pglog("{}: Input file of -i not found".format(infile), self.LGEREX)
+      fd = open(infile, 'r')
+      for line in fd:
+         line = line.strip()
+         if not line or line[0] == '#': continue
+         self.RDACP['f'].append(line)
+      fd.close()
+
    # function to start actions
    def start_actions(self):
       """Validate copy targets, configure host/bucket/endpoint context, and dispatch copies.
@@ -132,7 +159,23 @@ class GdexCp(PgFile):
          self.PGLOG['BACKUPEP'] = self.RDACP['fp']
       elif self.RDACP['tp']:
          self.PGLOG['BACKUPEP'] = self.RDACP['tp']
+      if self.RDACP['o']:
+         if not self.RDACP['fp']:
+            self.pglog("-o: works only when source Globus endpoint -fp is provided", self.LGEREX)
+         if self.RDACP['th'] or self.RDACP['tp'] or self.RDACP['tb']:
+            self.pglog("-o: works only for downloading to local files (no -th/-tp/-tb)", self.LGEREX)
+      if self.RDACP['m'] < 1: self.RDACP['m'] = 1
+      if self.RDACP['m'] > 16:
+         self.pglog("-m {}: process count too large, capped at 16".format(self.RDACP['m']), self.LOGWRN)
+         self.RDACP['m'] = 16
+      if self.RDACP['d']:
+         self.add_delayed_check()
+         self.cmdlog()
+         return
+      if self.RDACP['m'] > 1:
+         self.start_none_daemon('gdexcp', '', self.PGLOG['CURUID'], self.RDACP['m'], 120)
       self.copy_top_list(self.RDACP['f'])
+      if self.RDACP['m'] > 1: self.check_child(None, 0, self.LOGWRN, 1)
       hinfo = ''
       if self.RDACP['fh']: hinfo += " From " + self.RDACP['fh']
       if self.RDACP['th']: hinfo += " To " + self.RDACP['th']
@@ -175,7 +218,7 @@ class GdexCp(PgFile):
          if not re.match(r'^/', file): file = self.join_paths(self.CINFO['curdir'], file)
          self.CINFO['fpath'] = (file if dosub else op.dirname(file)) + "/"
          if info['isfile']:
-            self.CINFO['tcnt'] += self.copy_file(file, info['isfile'])
+            self.CINFO['tcnt'] += self.dispatch_copy(file, info)
          elif dosub or self.RDACP['R']:
             flist = self.gdex_glob(file, self.RDACP['fh'], 0, self.LGWNEX)
             if flist: self.copy_list(flist, 1, file)
@@ -197,7 +240,7 @@ class GdexCp(PgFile):
       fcnt = 0
       for file in tlist:
          if tlist[file]['isfile']:
-            fcnt += self.copy_file(file, tlist[file]['isfile'])
+            fcnt += self.dispatch_copy(file, tlist[file])
             self.CINFO['cpflag'] |= (1 if tlist[file]['isfile'] else 2)
          elif level < self.RDACP['R']:
             flist = self.gdex_glob(file, self.RDACP['fh'], 0, self.LGWNEX)
@@ -206,20 +249,50 @@ class GdexCp(PgFile):
          self.pglog("{}{}: {} {} copied from directory".format(self.CINFO['fhost'], cdir, fcnt, self.CINFO['cpstr'][self.CINFO['cpflag']]), self.LOGWRN)
       self.CINFO['tcnt'] += fcnt
    
+   # copy one file, forking a child process when running with option -m
+   def dispatch_copy(self, fromfile, finfo):
+      """Copy one file, dispatching the copy to a child process when -m > 1.
+
+      With a single process (-m 1) the file is copied in line.  With multiple
+      processes the copy is forked to a child via the PgSIG process pool (up to
+      RDACP['m'] children run concurrently); the parent records one dispatched
+      file and continues traversing, while each child performs the copy, logs
+      its own result, and exits.
+
+      Args:
+         fromfile (str): Absolute source file path.
+         finfo (dict): Source file-info dict (with 'isfile' and 'data_size').
+
+      Returns:
+         int: 1 if the file was copied (single process) or dispatched to a
+            child process (-m > 1), 0 otherwise.
+      """
+      if self.RDACP['m'] < 2: return self.copy_file(fromfile, finfo)
+      stat = self.start_child("gdexcp_{}".format(self.CINFO['pcnt']), self.LOGWRN, 1)
+      if stat <= 0: self.pglog("{}: cannot start child process to copy".format(fromfile), self.LGEREX)
+      if self.PGSIG['PPID'] > 1:   # in child process
+         self.copy_file(fromfile, finfo)
+         sys.exit(0)
+      self.CINFO['pcnt'] += 1   # in parent process; child already dropped its DB link
+      return 1
+
    # copy one file
-   def copy_file(self, fromfile, isfile):
+   def copy_file(self, fromfile, finfo):
       """Resolve the destination path for one source file and perform the copy.
 
       When a target directory is set (tpath), strips the source base path prefix
       and joins the remainder to tpath.  Otherwise copies directly to the -t value.
+      Skips the copy when the target already exists with the same size as the
+      source, unless -O is given to override an existing same-size target.
 
       Args:
          fromfile (str): Absolute source file path.
-         isfile (int): Non-zero when the source is a regular file (vs. a symlink type).
+         finfo (dict): Source file-info dict (with 'isfile' and 'data_size').
 
       Returns:
          int: 1 if the file was copied successfully, 0 otherwise.
       """
+      isfile = finfo['isfile']
       if self.CINFO['tpath']:
          fname = re.sub(r'^{}'.format(self.CINFO['fpath']), '', fromfile)
          if isfile:
@@ -228,7 +301,77 @@ class GdexCp(PgFile):
             tofile = self.CINFO['tpath'] + '/'
       else:
          tofile = self.RDACP['t']
-      return (1 if self.copy_gdex_file(tofile, fromfile, self.RDACP['th'], self.RDACP['fh'], self.LGWNEX) else 0)
+      if isfile and not self.RDACP['O']:
+         tinfo = self.check_gdex_file(tofile, self.RDACP['th'], 0, self.LGWNEX)
+         if tinfo and tinfo['data_size'] == finfo['data_size']:
+            self.pglog("{}{}: Target exists with same size, skip copying".format(self.CINFO['thost'], tofile), self.LOGWRN)
+            return 0
+      if self.RDACP['o']: return self.force_owner_copy(tofile, fromfile)
+      logact = self.LGWNEX | (self.OVRIDE if self.RDACP['O'] else 0)
+      return (1 if self.copy_gdex_file(tofile, fromfile, self.RDACP['th'], self.RDACP['fh'], logact) else 0)
+
+   # copy one file from a Globus endpoint and force COMMONUSER ownership
+   def force_owner_copy(self, tofile, fromfile):
+      """Download a Globus file via a tmp file so the final copy is owned by COMMONUSER.
+
+      A Globus endpoint dumps the local file owned by the endpoint's mapped user
+      rather than COMMONUSER ('gdexdata').  This downloads to a tmp file under
+      PGLOG['TMPPATH'], makes it group readable/writable as its owner via the
+      pgstart_<user> setuid wrapper, then copies it locally so the final file is
+      owned by COMMONUSER, and removes the tmp file.
+
+      Args:
+         tofile (str): Final local destination path.
+         fromfile (str): Source file path on the Globus endpoint.
+
+      Returns:
+         int: 1 if the file was copied successfully, 0 otherwise.
+      """
+      tmpfile = self.join_paths(self.PGLOG['TMPPATH'], "{}.{}".format(op.basename(fromfile), os.getpid()))
+      if not self.copy_gdex_file(tmpfile, fromfile, self.RDACP['th'], self.RDACP['fh'], self.LGWNEX): return 0
+      finfo = self.check_local_file(tmpfile, 2, self.LGWNEX)
+      owner = finfo['logname'] if finfo else None
+      if owner and owner != self.PGLOG['COMMONUSER']:
+         self.pgsystem(self.get_local_command("chmod g+rw " + tmpfile, owner), self.LGWNEX)
+      ret = self.copy_gdex_file(tofile, tmpfile, self.RDACP['th'], None, self.LGWNEX)
+      self.delete_local_file(tmpfile, self.LGWNEX)
+      return (1 if ret else 0)
+
+   # add a dscheck record so this gdexcp command runs later as a PBS batch job
+   def add_delayed_check(self):
+      """Queue this gdexcp invocation as a delayed PBS batch job via a dscheck record.
+
+      Records the current command (with the -d flag stripped so the batch run
+      performs the actual copy) into the RDADB dscheck table for the dscheck
+      daemon to later submit to PBS through bashqsub/tcshqsub.  The qsub resource
+      option always sets a 24 hour walltime; when -m > 1 it also reserves a single
+      node with (number of processes) cpus and 1gb of memory per cpu.
+      """
+      argv = [arg for arg in sys.argv[1:] if arg != '-d']
+      argstr = self.argv_to_string(argv, 1)
+      argextra = None
+      if len(argstr) > 100:
+         argextra = argstr[100:]
+         argstr = argstr[0:100]
+      record = {
+         'command': 'gdexcp',
+         'argv': argstr,
+         'specialist': self.PGLOG['CURUID'],
+         'workdir': self.CINFO['curdir'],
+         'oindex': 0,
+         'otype': '',
+         'action': None,
+         'dsid': None,
+         'mcount': 1,
+      }
+      (record['date'], record['time']) = self.get_date_time()
+      if argextra: record['argextra'] = argextra
+      qoptions = "-l walltime=24:00:00"
+      if self.RDACP['m'] > 1:
+         qoptions += ",select=1:ncpus={0}:mem={0}gb".format(self.RDACP['m'])
+      record['qoptions'] = qoptions
+      cidx = self.pgadd("dscheck", record, self.LGWNEX|self.AUTOID)
+      self.pglog("Chk{}: gdexcp {} added for delayed batch process".format(cidx, argstr), self.LOGWRN)
 
 # main function to execute this script
 def main():

@@ -1,77 +1,145 @@
 
- Copy files and directories to a target location.  Source and target may each
- reside on the local host, a remote host, an Object Store bucket, or a Globus
+ Name: gdexcp - copy files and directories as user 'gdexdata'
+
+ Copy files and directories to a target location.  The source and the target may
+ each reside on the local host, a remote host, an Object Store bucket, or a Globus
  endpoint.  Target files are owned by 'gdexdata' and created with configurable
  permission modes.
 
  Usage: gdexcp [-f] FromDirectories/Files [-t ToDirectory/FileName]   \
+              [-i InputFile] [-m ProcessCount] [-d] [-r] [-R RecursiveLevel] \
               [-fh FromHostName] [-th ToHostName]                     \
               [-fb FromBucket] [-tb ToBucket]                         \
               [-fp FromGlobusEndpoint] [-tp ToGlobusEndpoint]         \
-              [-F FileMode] [-D DirectoryMode] [-r] [-R RecursiveLevel] [-h]
+              [-F FileMode] [-D DirectoryMode] [-o] [-O] [-h]
 
-      - Option -f, source directories and/or files to copy.  This is the
-          default option, so paths may be given without the -f flag.
-          Shell wildcards are supported.  Use './' or '*' to copy everything
-          in the current directory.  Source paths must be readable by user
-          'gdexdata'; gdexcp will attempt to fix the mode if they are not;
+   gdexcp can be run from any directory.  Usage is displayed when no source paths
+   are given.
 
-      - Option -t, target directory or file name.  Defaults to '.' (current
-          directory).  Multiple source files cannot be copied to a single
-          target file name.  A trailing '/' on the target path treats it as
-          a directory;
 
-      - Option -fh, host name where the source files reside.
-          Defaults to the local host;
+ SOURCE AND TARGET
 
-      - Option -th, host name where the target files should be written.
-          Defaults to the local host;
+   -f  FromDirectories/Files
+          Source directories and/or files to copy.  This is the default option,
+          so paths may be given without the -f flag.  Shell wildcards are
+          supported; use './' or '*' to copy everything in the current directory.
+          A trailing '/' on a source directory path copies the contents of that
+          directory (as a file list) rather than the directory entry itself.
+          Source paths must be readable by user 'gdexdata'; gdexcp attempts to
+          fix the mode when they are not.
 
-      - Option -fb, Object Store bucket name for the source files;
+   -i  InputFile
+          A file holding a list of source paths to copy, one path per line.
+          Blank lines and lines starting with '#' are ignored.  The paths read
+          are appended to the -f source list.
 
-      - Option -tb, Object Store bucket name for the target files;
+   -t  ToDirectory/FileName
+          Target directory or file name.  Defaults to '.' (the current
+          directory).  A trailing '/' forces the target to be treated as a
+          directory.  Multiple source files cannot be copied to a single target
+          file name.
 
-      - Option -fp, Globus endpoint for the source files;
 
-      - Option -tp, Globus endpoint for the target files;
+ SOURCE/TARGET LOCATIONS (default to the local host)
 
-      - Option -F, permission mode for target files in octal notation.
-          Defaults to 664;
+   -fh FromHostName     host name where the source files reside.
+   -th ToHostName       host name where the target files are written.
+   -fb FromBucket       Object Store bucket name for the source files.
+   -tb ToBucket         Object Store bucket name for the target files.
+   -fp FromGlobusEndpoint   Globus endpoint for the source files.
+   -tp ToGlobusEndpoint     Globus endpoint for the target files.
 
-      - Option -D, permission mode for target directories in octal notation.
-          Defaults to 775;
 
-      - Option -r, copy directories and files recursively (no depth limit);
+ COPY BEHAVIOR
 
-      - Option -R RecursiveLevel, copy recursively up to the specified depth.
-          -R 1 copies only the immediate contents of each source directory;
+   -r     Copy directories and files recursively, with no depth limit.
 
-      - Option -h, display this help document;
+   -R  RecursiveLevel
+          Copy recursively up to the given depth.  -R 1 copies only the
+          immediate contents of each source directory.
 
-  This utility can be run from any directory.  Usage is displayed if no source
-  files are provided.  A trailing '/' on a source directory path copies the
-  contents of that directory rather than the directory entry itself.
+   -m  ProcessCount
+          Number of processes used to copy files in parallel.  Defaults to 1.
+          When greater than 1, the source files are distributed across that many
+          concurrent child processes.  Capped at 16; a larger value is reduced to
+          16 with a warning.
 
-  Examples:
+   -d     Add a dscheck record so this gdexcp command runs later as a delayed PBS
+          batch job (submitted by the dscheck daemon via bashqsub / tcshqsub).
+          The qsub resource always sets a 24 hour walltime; when -m is greater
+          than 1 it also reserves a single node with (ProcessCount) cpus and 1gb
+          of memory per cpu.
 
-    1. Copy all files and subdirectories under the current directory to a
-       remote host:
+   -o     Force a downloaded file to be owned by 'gdexdata'.  A Globus endpoint
+          writes the local file owned by the endpoint's mapped user; with -o the
+          file is downloaded to a tmp file, then copied locally so the final file
+          is owned by 'gdexdata'.  Only valid together with -fp and for
+          downloading to local files (not with -th/-tp/-tb).
 
-          gdexcp -r -f * -t /PathTo/d277006/ -th castle
+   -O     Override an existing target.  By default a source file is skipped when
+          the target already exists with the same size; give -O to copy it anyway
+          and overwrite the existing target.
 
-    2. Copy the contents of a specific local directory to a remote location
-       (trailing '/' on source omits the directory entry itself):
 
-          gdexcp -r -f /PathTo/DirectoryName/ -t /PathTo/d277006/ -th castle
+ TARGET PERMISSIONS (octal notation)
 
-       Without the trailing '/', DirectoryName itself is also copied:
+   -F  FileMode          permission mode for target files.       Defaults to 664.
+   -D  DirectoryMode     permission mode for target directories. Defaults to 775.
 
-          gdexcp -r -f /PathTo/DirectoryName -t /PathTo/d277006/ -th castle
 
-    3. Copy a single file to an Object Store bucket:
+ MISCELLANEOUS
 
-          gdexcp -f /PathTo/myfile.nc -tb my-bucket -t myfile.nc
+   -h     Display this help document.
 
-    4. Copy files from a remote host to the local current directory:
 
-          gdexcp -fh castle -f /PathTo/d277006/myfile.nc
+ NOTES
+
+   - A trailing '/' on a source directory path copies the contents of that
+     directory rather than the directory entry itself.
+   - By default an unchanged target (same size) is skipped; use -O to overwrite.
+   - If a Globus endpoint (-fp/-tp) is locally accessible, a direct local copy
+     (omitting -fp/-tp and giving the local path) is faster, avoiding the Globus
+     transfer overhead.
+   - A delayed batch job (-d) is given a 24 hour walltime.  Do not submit a single
+     batch job to copy too many files at once; if the copy cannot finish within 24
+     hours the job is killed.  Split a very large copy into multiple -d jobs (and/or
+     raise -m) so each one completes well within the walltime.
+
+
+ EXAMPLES
+
+   1. Copy all files and subdirectories under the current directory to a remote
+      host:
+
+         gdexcp -r -f * -t /PathTo/d277006/ -th castle
+
+   2. Copy the contents of a local directory to a remote location (trailing '/'
+      on the source omits the directory entry itself):
+
+         gdexcp -r -f /PathTo/DirectoryName/ -t /PathTo/d277006/ -th castle
+
+      Without the trailing '/', DirectoryName itself is also copied:
+
+         gdexcp -r -f /PathTo/DirectoryName -t /PathTo/d277006/ -th castle
+
+   3. Copy a single file to an Object Store bucket:
+
+         gdexcp -f /PathTo/myfile.nc -tb my-bucket -t myfile.nc
+
+   4. Copy files from a remote host to the local current directory:
+
+         gdexcp -fh castle -f /PathTo/d277006/myfile.nc
+
+   5. Download a file from a source Globus endpoint and force the local file to
+      be owned by 'gdexdata' (-o requires -fp):
+
+         gdexcp -fp gdex-quasar -f /d277006/myfile.nc -t /PathTo/myfile.nc -o
+
+   6. Copy the source paths listed in an input file using 4 parallel processes:
+
+         gdexcp -i filelist.txt -t /PathTo/d277006/ -m 4
+
+   7. Queue a delayed PBS batch job to copy a directory in parallel; the dscheck
+      daemon submits it later, reserving one node with 4 cpus and 4gb of memory:
+
+         gdexcp -r -f /PathTo/DirectoryName/ -t /PathTo/d277006/ -m 4 -d
