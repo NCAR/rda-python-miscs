@@ -1,0 +1,19 @@
+################################################################################
+#
+#     Title : appendix_rst.temp
+#    Author : Zaihua Ji,  zji@ucar.edu
+#      Date : 03/17/2026
+#   Purpose : template file for help document appendixA.rst (reStructuredText)
+#    Github : https://github.com/NCAR/rda-python-mics.git
+#
+################################################################################
+
+.. _appendixA:
+
+============================
+Appendix A: List of Examples
+============================
+
+__CONTENT__
+
+| :ref:`Back to Table of Contents <index>`

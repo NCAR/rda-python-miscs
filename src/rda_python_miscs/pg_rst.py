@@ -140,10 +140,10 @@ class PgRST(PgFile, PgUtil):
       """
       self.OPTS = opts
       self.ALIAS = alias
+      self.DOCS['DOCNAM'] = docname
 
       self.parse_docs(docname)
       if not self.sections: self.pglog(docname + ": empty document", self.LGWNEX)
-      self.DOCS['DOCNAM'] = docname
       if docname in self.LINKS: self.LINKS.remove(docname)
       self.DOCS['DOCLNK'] = r"({})".format('|'.join(self.LINKS))
       self.DOCS['DOCTIT'] = docname.upper()
@@ -152,6 +152,7 @@ class PgRST(PgFile, PgUtil):
       self.write_index(self.sections[0])
       for section in self.sections:
          self.write_section(section)
+      self.write_appendix()
 
    #
    # parse the original document and return a array of sections,
@@ -172,7 +173,9 @@ class PgRST(PgFile, PgUtil):
       with open(docfile, 'r') as fh:
          line = fh.readline()
          while line:
-            if re.match(r'\s*#', line):
+            # Skip full-line authoring comments, but keep '#!' shebang lines so
+            # shell scripts shown in example content blocks stay intact.
+            if re.match(r'\s*#(?!!)', line):
                line = fh.readline()
                continue   # skip comment lines
             ms = re.match(r'^(.*\S)\s+#', line)
@@ -191,13 +194,21 @@ class PgRST(PgFile, PgUtil):
                   option = self.record_option(section, option, example, ms.group(1), ms.group(2))
                   example = None
                elif option:
-                  ms = re.match(r'^  For( | another )example, (.*)$', line)
-                  if ms:    # found example
-                     example = self.record_example(option, example, ms.group(2))
-                  elif example:
-                     example['desc'] += line + "\n"
+                  if option.get('inexm'):
+                     # inside an 'Examples:' block: collect raw lines verbatim
+                     # (split into individual examples later in split_examples)
+                     option['exmraw'] += line + "\n"
                   else:
-                     option['desc'] += line + "\n"
+                     ms = re.match(r'^  (?:For(?: | another )example,|Example[ ]*[,\-])\s*(.*)$', line)
+                     if ms:    # found a single labeled example
+                        example = self.record_example(option, example, ms.group(1))
+                     elif re.match(r'^  Examples:\s*$', line):
+                        option['inexm'] = True   # start of a multi-example block
+                        option['exmraw'] = ""
+                     elif example:
+                        example['desc'] += line + "\n"
+                     else:
+                        option['desc'] += line + "\n"
                else:
                   section['desc'] += line + "\n"
 
@@ -261,10 +272,61 @@ class PgRST(PgFile, PgUtil):
       """
       if option:
          if example: self.record_example(option, example)
+         self.split_examples(option)
          self.options[option['opt']] = option     # record option globally
          section['opts'].append(option['opt']) # record option short name in section
 
       if nopt: return self.init_option(section['secid'], nopt, ndesc)
+
+   def split_examples(self, option):
+      """Split an option's pending ``Examples:`` block into individual examples.
+
+      The raw text collected after an ``Examples:`` header is segmented into
+      blank-line-separated blocks.  A block whose last line ends with ``:`` and
+      whose first line is descriptive prose (not a command, option flag, or a
+      ``<<Content ...>>`` header) starts a new example; following blocks
+      (command synopsis, script content, trailing notes) belong to that
+      example until the next title block.
+
+      Args:
+         option (dict): The option whose ``exmraw`` buffer is parsed; the
+                        buffer is removed and one example is recorded per
+                        title block found.
+      """
+      buf = option.pop('exmraw', None)
+      option.pop('inexm', None)
+      if not buf: return
+
+      blocks = []
+      cur = []
+      for ln in buf.split('\n'):
+         if ln.strip() == '':
+            if cur: blocks.append(cur); cur = []
+         else:
+            cur.append(ln)
+      if cur: blocks.append(cur)
+
+      def is_title(block):
+         if not block[-1].rstrip().endswith(':'): return False
+         first = block[0].strip()
+         if first.startswith('<<'): return False
+         if re.match(r'[-*(]', first): return False
+         if re.match(r'{}\b'.format(self.DOCS['DOCNAM']), first): return False
+         return True
+
+      exmtext = None
+      for block in blocks:
+         btext = '\n'.join(block)
+         if is_title(block):
+            if exmtext is not None:
+               self.record_example(option, self.init_example(option['opt'], exmtext))
+            exmtext = btext + "\n"
+         elif exmtext is not None:
+            exmtext += "\n" + btext + "\n"
+         else:
+            option['desc'] += btext + "\n"   # stray text before the first example
+      if exmtext is not None:
+         self.record_example(option, self.init_example(option['opt'], exmtext))
 
    def record_example(self, option, example, ndesc=None):
       """Append the completed *example* to ``self.examples`` and optionally start a new one.
@@ -478,18 +540,21 @@ class PgRST(PgFile, PgUtil):
       """Build and return the RST table-of-contents string of a given section.
 
       Produces a nested bullet list of section links (indented by section
-      level) followed by a flat Appendix A list of all example links.
+      level).  For the index (``csection is None``) the example appendix is a
+      standalone page (``appendixA``) added to the toctree; for a section the
+      examples in its subtree are listed inline as a local Appendix A.
 
       Returns:
          str: RST-formatted TOC content ready for ``__TOC__`` substitution.
       """
-      
+
       content = ""
       clevel = csection['level'] if csection else 0
       csecid = csection['secid'] if csection else ""
       depth = self.TLEVEL - clevel
       level = clevel+1
       preid = csecid+'.'
+      is_index = csection is None
 
       # nested bullet list for all sections
       for section in self.sections:
@@ -497,9 +562,14 @@ class PgRST(PgFile, PgUtil):
          if csecid and not secid.startswith(preid): continue
          if section['level'] == level: content += "   section{}\n".format(secid)
 
+      # The full list of examples lives on its own appendix page in the index.
+      if is_index and self.examples: content += "   appendixA\n"
+
       if not content: return ""
 
       content = f".. toctree::\n   :maxdepth: {depth}\n   :caption: Table of Contents\n\n{content}\n"
+      if is_index: return content
+
       # appendix A: list of examples for the parent section and its subsections
       appendix = ""
       idx = 1  # used as example index
@@ -507,7 +577,7 @@ class PgRST(PgFile, PgUtil):
          opt = exm['opt']
          option = self.options[opt]
          secid = option['secid']
-         if not csecid or secid == csecid or secid.startswith(preid):
+         if secid == csecid or secid.startswith(preid):
             appendix += "- :ref:`A.{}. {} Option -{} (-{}) <{}_e{}>`\n".format(
                         idx, option['type'], opt, option['name'], secid, idx)
          idx += 1
@@ -515,6 +585,28 @@ class PgRST(PgFile, PgUtil):
          content += "**Appendix A: List of Examples**\n\n" + appendix + "\n"
 
       return content
+
+   #
+   # write the appendix page listing all examples in the document
+   #
+   def write_appendix(self):
+      """Write ``appendixA.rst`` listing every example with a link.
+
+      Each entry links to the example anchor on its section page. Does nothing
+      when the document has no examples.
+      """
+      if not self.examples: return
+      content = ""
+      idx = 1
+      for exm in self.examples:
+         option = self.options[exm['opt']]
+         secid = option['secid']
+         title = exm['title'].strip().rstrip(':')
+         content += "- :ref:`A.{}. {} Option -{} (-{}): {} <{}_e{}>`\n".format(
+                     idx, option['type'], exm['opt'], option['name'], title, secid, idx)
+         idx += 1
+
+      self.template_to_rst("appendix", {'CONTENT': content}, "A")
 
    #
    # create a section rst content
@@ -672,7 +764,8 @@ class PgRST(PgFile, PgUtil):
 
       for optary in opts:
          opt = self.get_short_option(optary[1])
-      
+         if opt is None: continue   # not an option of this document; leave as-is
+
          pre = optary[0]
          after = optary[2]
          secid = self.options[opt]['secid']
@@ -826,7 +919,7 @@ class PgRST(PgFile, PgUtil):
       line0 = lines[0]
       normal = 1
       if dtype == 2:
-         ms = re.match(r'^<<(Content .*)>>$', line0)
+         ms = re.match(r'^\s*<<(Content .*)>>$', line0)
          if ms:   # input files for examples
             content += ms.group(1) + ":\n\n.. code-block:: none\n\n"
             normal = 0
@@ -928,13 +1021,23 @@ class PgRST(PgFile, PgUtil):
                rows.append(tuple(prev_vals))
             content = self.build_rst_list_table(rows)
          else:
-            # multi-column table split on 2+ spaces
-            rows = []
-            for i in range(cnt):
-               line = lines[i].strip()
-               vals = re.split(r'\s{2,}', self.replace_option_link(line, secid, 1))
-               rows.append(vals)
-            content = self.build_rst_simple_table(rows) + "\n"
+            raw = [lines[i].strip() for i in range(cnt)]
+            cmdpat = r'(?:[*\d][\d* ]*\s+)?{}(\s|$)'.format(re.escape(self.DOCS['DOCNAM']))
+            if raw and all(re.match(cmdpat, r) for r in raw):
+               # Command line(s) following a label (e.g. a Quick Start entry):
+               # render as a literal block instead of a (degenerate) table.
+               content = ".. code-block:: none\n\n"
+               for r in raw:
+                  content += "   " + r + "\n"
+               content += "\n"
+            else:
+               # multi-column table split on 2+ spaces
+               rows = []
+               for i in range(cnt):
+                  line = lines[i].strip()
+                  vals = re.split(r'\s{2,}', self.replace_option_link(line, secid, 1))
+                  rows.append(vals)
+               content = self.build_rst_simple_table(rows) + "\n"
 
       return content
 
@@ -1046,10 +1149,10 @@ class PgRST(PgFile, PgUtil):
          p (str): Option name to look up (short, long, or alias).
 
       Returns:
-         str: Canonical two-letter option short name.
-
-      Raises:
-         PgLOG error (LGWNEX) if *p* cannot be resolved.
+         str | None: Canonical two-letter option short name, or ``None`` when
+            *p* does not name an option of this document (e.g. an option of a
+            different program referenced in prose).  Callers skip such tokens
+            so unrelated option-like text is left untouched.
       """
       plen = len(p)
       if plen == 2 and p in self.options: return p
@@ -1061,7 +1164,7 @@ class PgRST(PgFile, PgUtil):
          for alias in self.ALIAS[opt]:
             if re.match(r'^{}$'.format(alias), p, re.I): return opt
 
-      self.pglog("{} - unknown option for {}".format(p, self.DOCS['DOCNAM']), self.LGWNEX)
+      return None
 
    #
    # replace with rst link for a given section title
