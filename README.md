@@ -28,6 +28,8 @@ The package provides two categories of programs:
 | `gdexcp` | `rdacp` | `setuid_gdexcp` / `setuid_rdacp` | Copy files and directories across local, remote, Object Store, or Globus endpoints |
 | `gdexkill` | `rdakill` | `setuid_gdexkill` / `setuid_rdakill` | Kill local processes and their children, or cancel PBS batch jobs |
 | `gdexmod` | `rdamod` | `setuid_gdexmod` / `setuid_rdamod` | Change permission modes for files and directories owned by gdexdata |
+| `decsdata_storage` | | `setuid_decsdata_storage` | Move decsdata datasets into the GLADE HSM cold storage to migrate them onto tape |
+| `decsdata_restore` | | `setuid_decsdata_restore` | Recall decsdata datasets out of the GLADE HSM cold storage and copy them back |
 
 ## Environment setup
 
@@ -86,8 +88,8 @@ pip install rda_python_miscs
 
 ## Setuid Setup
 
-The setuid programs (`gdexcp`, `gdexkill`, `gdexmod` and their `rda*` aliases)
-execute as the common user `PGLOG['COMMONUSER']` (default `gdexdata`) via
+The setuid programs (`gdexcp`, `gdexkill`, `gdexmod`, `decsdata_storage`,
+`decsdata_restore` and the `rda*` aliases) execute as the common user `PGLOG['COMMONUSER']` (default `gdexdata`) via
 the `rda_python_setuid` mechanism, which is pulled in automatically as a
 dependency.  After `pip install` above, choose one of the wiring options
 below.
@@ -142,3 +144,30 @@ pywrapper-install -u|--update
 The shared setuid setup guide is shown automatically if any `setuid_*`
 connector script is invoked directly before the setuid wrapper has been
 configured.
+
+## Cold storage setup
+
+`decsdata_storage` and `decsdata_restore` drive the GLADE HSM through the
+`glade_hsm` script, which is not part of this package.  They look it up at
+`~benkirk/glade_hsm` unless the environment variable `GLADE_HSM` names another
+copy of it:
+
+```bash
+export GLADE_HSM=/path/to/glade_hsm
+```
+
+Both programs work on the decsdata directory `PGLOG['DECSHOME']` (default
+`/glade/campaign/collections/gdex/decsdata`, also reachable as
+`/gdex/decsdata`), which option `-w` overrides.  Only members of the DECS group
+may run them, and `decsdata_restore` reads Table `sfile` in RDADB to size a
+restore, so a working RDADB login is required as well.
+
+Because the decsdata quota is limited, check the space left with `gladequota`
+before a large restore:
+
+```bash
+pgstart_gdexdata gladequota    # or plain 'gladequota' when logged in as gdexdata
+```
+
+`decsdata_restore -x` runs the same check itself and refuses to request a
+recall unless twice the size of the data is still available.

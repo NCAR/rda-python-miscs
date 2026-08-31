@@ -14,3 +14,5 @@ def test_miscs():
    import rda_python_miscs.gdexps
    import rda_python_miscs.gdexsub
    import rda_python_miscs.gdexzip
+   import rda_python_miscs.decsdata_storage
+   import rda_python_miscs.decsdata_restore
