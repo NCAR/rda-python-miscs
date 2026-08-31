@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rda_python_miscs"
-version = "3.0.4"
+version = "3.0.5"
 authors = [
   { name="Zaihua Ji", email="zji@ucar.edu" },
 ]
@@ -52,3 +52,5 @@ pythonpath = [
 "setuid_gdexmod" = "rda_python_miscs.gdexmod:main"
 "setuid_rdamod" = "rda_python_miscs.gdexmod:main"
 "pgrst" = "rda_python_miscs.pg_rst:main"
+"setuid_decsdata_storage" = "rda_python_miscs.decsdata_storage:main"
+"setuid_decsdata_restore" = "rda_python_miscs.decsdata_restore:main"

@@ -1,0 +1,101 @@
+
+ Restore decsdata datasets, or parts of them, out of the GLADE HSM cold storage.
+ This is the opposite of 'decsdata_storage'.  A recall request is only submitted
+ by 'glade_hsm recall' and is fulfilled by the HSM batch processes later on, so
+ restoring is done in three steps:
+
+    1. Option -x submits the recall requests for the given dataset paths;
+    2. Option -s checks the recall status, repeat it until nothing is on tape;
+    3. Option -r copies the recalled data back into the decsdata directory.
+
+ Recalled files stay readable inside the 'COLD_STORAGE/' path for 7 days only,
+ after which they are migrated onto tape again, so step 3 must be done within
+ that window.
+
+ Usage: decsdata_restore [-D Date] [-w DecsdataDirectory] [-l ListFile]  \
+                         [-d DatasetPathList] [-f] -x|-s|-r [TargetDirectory]
+
+      - Option -D Date, the cold storage date, in YYYYMMDD or YYYY-MM-DD.  Only
+          '<decsdata>/cold_storage_<date>/COLD_STORAGE' is searched for the
+          data.  Without it, '<decsdata>/COLD_STORAGE' and every
+          '<decsdata>/cold_storage_<YYYYMMDD>/COLD_STORAGE' are all searched,
+          the most recent dated one first.  A dataset path found in more than
+          one of them is acted on in the first one only, and the ignored ones
+          are logged;
+
+      - Option -w DecsdataDirectory, the decsdata directory holding the cold
+          storage directories, and the directory the data is copied back into.
+          Defaults to the configured decsdata root path, /gdex/decsdata;
+
+      - Option -l ListFile, a file holding one dataset path per line.  Only
+          used if -d is not given.  Defaults to 'dsids_<today>.lst' in the
+          current directory, which is generated from every dNNNNNN directory
+          found in the cold storage directories if it does not exist yet;
+
+      - Option -d DatasetPathList, one or more dataset IDs to restore, such as
+          '-d d612000 d627000'.  Append a sub-path to a dataset ID to restore
+          part of it only, such as '-d d612000/2020/01';
+
+      - Option -f, copy the data back even while some of its files are still on
+          tape.  Without it, Action -r refuses to copy such data;
+
+      - Option -h, display this help document;
+
+      - Action -x, submit the recall requests to bring the data back on disk.
+          The decsdata area is limited, so the size to restore is added up
+          from Table 'sfile' in RDADB and compared to the space left for the
+          decsdata directory, as reported by 'gladequota', before any recall
+          is requested.  TWICE the size is required, since the recalled copy
+          in the cold storage and the copy made by Action -r later on both
+          live under the decsdata quota; the recall is stopped if the space
+          left is not enough;
+
+      - Action -s, report the HSM status of the data, including the number of
+          files still on tape and the log of any outstanding recall request;
+
+      - Action -r [TargetDirectory], copy the recalled data back under
+          '<decsdata>/<dsid>', or under the given TargetDirectory.  A restored
+          sub-path keeps its relative position, so 'd612000/2020/01' is copied
+          back to '<TargetDirectory>/d612000/2020/01'.  The dataset directory,
+          and any sub-directory of it, is created if it does not exist yet.
+
+  One and only one of the Actions -x, -s and -r is required; this help document
+  is displayed without any of them.  This utility can be run from any directory.
+  It is executed under the effective user 'gdexdata' via setuid, so the restored
+  data is owned by 'gdexdata'.  The cold storage copy of the data is left in
+  place by Action -r; move it out of the 'COLD_STORAGE/' path manually to take
+  a dataset out of the HSM permanently.
+
+  Examples:
+
+    1. Restore a whole dataset from the cold storage of the root decsdata
+       directory, /gdex/decsdata/COLD_STORAGE/d612000:
+
+          decsdata_restore -d d612000 -x
+          decsdata_restore -d d612000 -s
+          decsdata_restore -d d612000 -r
+
+    2. Restore it from the cold storage directory of a specific date,
+       /gdex/decsdata/cold_storage_20250529/COLD_STORAGE/d612000:
+
+          decsdata_restore -D 20250529 -d d612000 -x
+
+    3. Restore one year of a dataset only:
+
+          decsdata_restore -d d612000/2020 -x
+          decsdata_restore -d d612000/2020 -s
+          decsdata_restore -d d612000/2020 -r
+
+    4. Copy the recalled data back to a directory other than the decsdata one:
+
+          decsdata_restore -d d612000 -r /PathTo/OtherDirectory
+
+    5. Check the status of every dataset in every cold storage directory,
+       generating the dataset list file automatically:
+
+          decsdata_restore -s
+
+    6. Copy a dataset back even though some of its files are still on tape,
+       which makes the HSM read them off tape while they are being copied:
+
+          decsdata_restore -d d612000 -f -r

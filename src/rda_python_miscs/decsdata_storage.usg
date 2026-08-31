@@ -1,0 +1,66 @@
+
+ Move decsdata datasets into a dated cold storage directory and hand them to the
+ GLADE HSM to be migrated onto tape.  Each dataset directory is moved from the
+ decsdata directory into '<decsdata>/cold_storage_<date>/' and then passed to
+ 'glade_hsm migrate', which relocates it once more into a 'COLD_STORAGE/'
+ sub-directory, ending up as:
+
+    <decsdata>/cold_storage_<date>/COLD_STORAGE/<dsid>
+
+ The HSM batch processes then migrate every large file (>= 100MB) underneath the
+ 'COLD_STORAGE/' path onto tape.  All files inside a 'COLD_STORAGE/' path are
+ marked immutable, which prevents modification of their contents and metadata.
+ Use 'decsdata_restore' to bring the data back.
+
+ Usage: decsdata_storage [-D Date] [-w DecsdataDirectory] [-l ListFile]  \
+                         [-d DatasetList] -x
+
+      - Option -D Date, the cold storage date, in YYYYMMDD or YYYY-MM-DD.  It
+          names the cold storage directory '<decsdata>/cold_storage_<date>'.
+          Defaults to today;
+
+      - Option -w DecsdataDirectory, the decsdata directory the datasets are
+          stored from, and the directory the cold storage directory is created
+          in.  Defaults to the configured decsdata root path, /gdex/decsdata;
+
+      - Option -l ListFile, a file holding one dataset ID per line.  Only used
+          if -d is not given.  Defaults to 'dsids_<date>.lst' in the current
+          directory, which is generated from every dNNNNNN directory found in
+          the decsdata directory if it does not exist yet;
+
+      - Option -d DatasetList, one or more dataset IDs to move into cold
+          storage, such as '-d d612000 d627000';
+
+      - Option -h, display this help document;
+
+      - Option -x, execute the cold storage moves.  This option is mandatory;
+          this help document is displayed without it.  Note that no
+          confirmation is asked for once -x is given.
+
+  This utility can be run from any directory.  It is executed under the
+  effective user 'gdexdata' via setuid, so the moved data keeps its ownership.
+  A dataset is skipped, and an error is logged, if it is not an existing
+  directory in the decsdata directory or if it cannot be moved.
+
+  Examples:
+
+    1. Move two given datasets into today's cold storage:
+
+          decsdata_storage -d d612000 d627000 -x
+
+    2. Move them into the cold storage directory of a specific date:
+
+          decsdata_storage -D 20250529 -d d612000 -x
+
+       The data then ends up in:
+
+          /gdex/decsdata/cold_storage_20250529/COLD_STORAGE/d612000
+
+    3. Move every dataset listed in a list file:
+
+          decsdata_storage -l my_dsids.lst -x
+
+    4. Move every dNNNNNN dataset found in a non-default decsdata directory,
+       generating the dataset list file automatically:
+
+          decsdata_storage -w /PathTo/decsdata -x
