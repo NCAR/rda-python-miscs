@@ -26,6 +26,7 @@ The package provides two categories of programs:
 | Command | Alias | Connector script | Description |
 |---------|-------|-----------------|-------------|
 | `gdexcp` | `rdacp` | `setuid_gdexcp` / `setuid_rdacp` | Copy files and directories across local, remote, Object Store, or Globus endpoints |
+| `gdexdrop` | | `setuid_gdexdrop` | Copy local files into a GDEX dataset directory as gdexdata, for data providers outside the DECS group |
 | `gdexkill` | `rdakill` | `setuid_gdexkill` / `setuid_rdakill` | Kill local processes and their children, or cancel PBS batch jobs |
 | `gdexmod` | `rdamod` | `setuid_gdexmod` / `setuid_rdamod` | Change permission modes for files and directories owned by gdexdata |
 | `decsdata_storage` | | `setuid_decsdata_storage` | Move decsdata datasets into the GLADE HSM cold storage to migrate them onto tape |
@@ -88,7 +89,7 @@ pip install rda_python_miscs
 
 ## Setuid Setup
 
-The setuid programs (`gdexcp`, `gdexkill`, `gdexmod`, `decsdata_storage`,
+The setuid programs (`gdexcp`, `gdexdrop`, `gdexkill`, `gdexmod`, `decsdata_storage`,
 `decsdata_restore` and the `rda*` aliases) execute as the common user `PGLOG['COMMONUSER']` (default `gdexdata`) via
 the `rda_python_setuid` mechanism, which is pulled in automatically as a
 dependency.  After `pip install` above, choose one of the wiring options
@@ -144,6 +145,33 @@ pywrapper-install -u|--update
 The shared setuid setup guide is shown automatically if any `setuid_*`
 connector script is invoked directly before the setuid wrapper has been
 configured.
+
+## gdexdrop access list
+
+`gdexdrop` lets data providers who are **not** in the DECS group copy files into
+a dataset directory so that the result is owned by `gdexdata`.  It is a
+deliberately narrow alternative to `gdexcp`: the destination is always
+`/glade/campaign/collections/gdex/data/<dsid>`, a path that escapes the dataset
+directory is rejected, and every source must be readable by the calling user
+rather than only by `gdexdata`.
+
+Who may drop into which dataset is read from the access list
+`/glade/u/home/gdexdata/config/gdexdrop.conf`.  It must be owned by `gdexdata`
+and must not be writable by group or others, otherwise `gdexdrop` refuses to
+run.  Each line is a login name, a colon, and the colon-separated dataset IDs
+that login may drop into, or `all` for every dataset; `#` starts a comment:
+
+```
+# login: dsid1[:...:dsidn]
+jdoe: d123456:d654321
+asmith: d111222
+gdexhelp: all
+```
+
+The root path, the access list path and the log path are compiled into the
+program rather than taken from `PGLOG`, because `PGLOG['DSDHOME']`,
+`PGLOG['DSSHOME']` and `PGLOG['LOGPATH']` are all settable from environment
+variables of the same name, which the caller controls.
 
 ## Cold storage setup
 
