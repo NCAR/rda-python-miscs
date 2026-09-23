@@ -40,7 +40,9 @@
 
   Every source path must be readable by the calling user, not merely by
   'gdexdata'; a path the caller cannot read themselves is refused.  Copied files
-  and directories are owned by 'gdexdata'.
+  and directories are owned by 'gdexdata' and belong to the GDEX group, as do any
+  sub-directories created for -t; without that they would stay in the calling
+  user's group, since only the user is switched to 'gdexdata', not the group.
 
   Access List
   -----------
