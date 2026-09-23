@@ -17,7 +17,12 @@
           files into.  Missing sub-directories are created.  The path must stay
           inside the dataset directory; '..' components and symbolic links
           leading out of it are rejected.  Defaults to the dataset directory
-          itself;
+          itself.
+          An absolute path under /tmp/ names any sub-path of /tmp instead, for
+          trying a drop out without touching the dataset tree.  The dataset of
+          -ds is still checked against the access list, and because /tmp is
+          world writable, the existing part of the path must belong to the
+          calling user or to 'gdexdata';
 
       - Option -f File/Directory List is the default option, so the source paths
           may be given without it and in any position.  Relative paths are
@@ -77,3 +82,7 @@
     4. Drop a long list of files named in a file, with group-writable modes:
 
           gdexdrop -ds d123456 -i filelist.txt -F 664 -D 775
+
+    5. Try a drop out under /tmp, leaving the dataset directory alone:
+
+          gdexdrop -ds d123456 -t /tmp/mydrop hourly.2026*.nc
