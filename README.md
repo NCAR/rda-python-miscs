@@ -155,6 +155,11 @@ deliberately narrow alternative to `gdexcp`: the destination is always
 directory is rejected, and every source must be readable by the calling user
 rather than only by `gdexdata`.
 
+Everything dropped, including sub-directories created for `-t`, is also set to the
+GDEX group `PGLOG['GDEXGRP']`.  The setuid wrapper switches only the user to
+`gdexdata`, not the group, so without that step a dropped file would stay in the
+calling user's group unless the directory it landed in carried the setgid bit.
+
 Who may drop into which dataset is read from the access list
 `/glade/u/home/gdexdata/config/gdexdrop.conf`.  It must be owned by `gdexdata`
 and must not be writable by group or others, otherwise `gdexdrop` refuses to

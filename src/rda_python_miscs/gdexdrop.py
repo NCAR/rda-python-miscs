@@ -32,7 +32,8 @@ class GdexDrop(PgFile):
    by -t, and is verified to stay inside that dataset directory.  The caller must
    be granted the dataset in the gdexdrop access list, and must be able to read
    every source path as themselves; both checks exist because the copy itself
-   runs with the privileges of 'gdexdata'.
+   runs with the privileges of 'gdexdata'.  Everything dropped is then set to the
+   GDEX group PGLOG['GDEXGRP'], which the copy does not land in on its own.
    """
 
    def __init__(self):
@@ -164,8 +165,11 @@ class GdexDrop(PgFile):
       """
       self.DINFO['target'] = self.resolve_target()
       self.validate_caller()
+      if not self.PGLOG['GDEXGID']:
+         self.pglog(self.PGLOG['GDEXGRP'] + ": Unknown Group to own the dropped files", self.LGEREX)
       self.PGLOG['FILEMODE'] = self.DROP['F']
       self.PGLOG['EXECMODE'] = self.DROP['D']
+      self.make_target_directory()
       for file in self.DROP['f']:
          self.DINFO['tcnt'] += self.drop_one(file)
       if self.DINFO['tcnt'] > 0:
@@ -245,6 +249,44 @@ class GdexDrop(PgFile):
       if not ('all' in dsids or self.DROP['ds'] in dsids):
          self.pglog("{}: NOT granted Dataset {} in {}".format(logname, self.DROP['ds'], DROPCONF), self.LGEREX)
 
+   # create the target directory, and set the group of each directory created
+   def make_target_directory(self):
+      """Create the sub-directories named by -t that do not exist yet.
+
+      They are created here rather than on the fly by local_copy_local() so that
+      set_drop_group() can be called on each one; a directory left in the calling
+      user's group could not be written into by the rest of the DECS group later.
+      """
+      newdirs = []
+      dir = self.DINFO['target']
+      while not op.isdir(dir):
+         newdirs.insert(0, dir)
+         dir = op.dirname(dir)
+      if not newdirs: return
+      self.make_local_directory(self.DINFO['target'], self.LGWNEX)
+      for dir in newdirs: self.set_drop_group(dir)
+
+   # set the group of a dropped path, and of everything under it for a directory
+   def set_drop_group(self, path):
+      """Set the group of path, and of all of its contents for a directory.
+
+      The copy runs with an effective user of 'gdexdata' but with the EFFECTIVE
+      GROUP of the caller, so a dropped file lands in the caller's group unless
+      the directory it lands in happens to carry the setgid bit.  Symbolic links
+      are skipped, since os.chown() follows them out of the dataset directory.
+
+      Args:
+         path (str): Absolute path of a dropped file or directory.
+      """
+      if op.islink(path): return
+      self.change_local_group(path, None, None, None, self.LOGWRN)
+      if not op.isdir(path): return
+      for root, dirs, files in os.walk(path):
+         for name in dirs + files:
+            subpath = op.join(root, name)
+            if op.islink(subpath): continue
+            self.change_local_group(subpath, None, None, None, self.LOGWRN)
+
    # copy one source path into the target directory
    def drop_one(self, file):
       """Copy one source file or directory into the target directory.
@@ -269,7 +311,9 @@ class GdexDrop(PgFile):
          if tinfo and tinfo['data_size'] == finfo['data_size']:
             self.pglog(tofile + ": Target exists with same size, skip copying", self.LOGWRN)
             return 0
-      return (1 if self.local_copy_local(tofile, path, self.LGWNEX) else 0)
+      if not self.local_copy_local(tofile, path, self.LGWNEX): return 0
+      self.set_drop_group(tofile)
+      return 1
 
 # main function to execute this script
 def main():
