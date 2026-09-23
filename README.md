@@ -155,6 +155,12 @@ deliberately narrow alternative to `gdexcp`: the destination is always
 directory is rejected, and every source must be readable by the calling user
 rather than only by `gdexdata`.
 
+An absolute `-t` under `/tmp/` names any sub-path of `/tmp` instead of a sub-path
+of the dataset directory, so that a drop can be tried out without touching the
+dataset tree.  The dataset of `-ds` is still checked against the access list, and
+because `/tmp` is world writable — unlike a dataset directory — the part of the
+path that already exists must belong to the calling user or to `gdexdata`.
+
 Everything dropped, including sub-directories created for `-t`, is also set to the
 GDEX group `PGLOG['GDEXGRP']`.  The setuid wrapper switches only the user to
 `gdexdata`, not the group, so without that step a dropped file would stay in the

@@ -24,6 +24,7 @@ DROPROOT = "/glade/campaign/collections/gdex/data"      # dataset data root path
 DROPCONF = "/glade/u/home/gdexdata/config/gdexdrop.conf"   # access list
 DROPLOG = "/glade/u/home/gdexdata/dssdb/log"            # log path
 DROPUSER = "gdexdata"                                   # owner of dropped files
+DROPTMP = "/tmp"                                        # alternate root, for testing
 
 class GdexDrop(PgFile):
    """Copy local files and directories into a GDEX dataset directory as 'gdexdata'.
@@ -187,16 +188,45 @@ class GdexDrop(PgFile):
       real path of the dataset directory, so that neither a '..' component in -t
       nor an existing symbolic link can move the drop outside the dataset.
 
+      An absolute -t under DROPTMP names any sub-path of that directory instead,
+      for trying a drop out without touching the dataset tree.  The dataset of
+      -ds is still validated against the access list.
+
       Returns:
          str: Resolved absolute target directory.
       """
       dsid = self.DROP['ds']
       if not re.match(r'^[a-z]\d{6}$', dsid):
          self.pglog(dsid + ": Invalid Dataset ID of -ds, expecting the form d123456", self.LGEREX)
+      if self.DROP['t'] and re.match(r'^{}/'.format(DROPTMP), self.DROP['t']):
+         return self.tmp_target()
       dsroot = op.realpath(op.join(DROPROOT, dsid))
       if not op.isdir(dsroot):
          self.pglog("{}: Dataset directory NOT exists under {}".format(dsid, DROPROOT), self.LGEREX)
       target = self.confine_path(op.join(dsroot, self.DROP['t']) if self.DROP['t'] else dsroot, dsroot)
+      return target
+
+   # resolve a target of -t that names a sub-path of DROPTMP
+   def tmp_target(self):
+      """Return the resolved -t path under DROPTMP, exiting if it may not be used.
+
+      DROPTMP is world writable, unlike a dataset directory, so a path there can
+      be replaced by another user between this check and the copy, and may well
+      belong to somebody else already.  The existing part of the path is therefore
+      required to belong to the caller or to DROPUSER, so that a drop cannot be
+      aimed at a directory a third user controls.
+
+      Returns:
+         str: Resolved absolute target directory under DROPTMP.
+      """
+      tmproot = op.realpath(DROPTMP)
+      target = self.confine_path(self.DROP['t'], tmproot)
+      dir = target
+      while not op.isdir(dir): dir = op.dirname(dir)
+      if dir == tmproot: return target   # nothing of the path exists yet
+      info = self.check_local_file(dir, 2, self.LOGWRN)
+      if info and info['logname'] not in (self.PGLOG['CURUID'], DROPUSER):
+         self.pglog("{}: Target path under {} is owned by {}".format(dir, DROPTMP, info['logname']), self.LGEREX)
       return target
 
    # make sure a path stays inside the dataset directory
