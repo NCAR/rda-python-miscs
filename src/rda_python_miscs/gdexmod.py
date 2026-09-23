@@ -196,7 +196,7 @@ def main():
    """Entry point: instantiate GdexMod, parse arguments, run, and exit."""
    from rda_python_setuid.setup_guide import show_setup_guide
    object = GdexMod()
-   show_setup_guide(object, 'rda_python_miscs', ['gdexcp', 'gdexkill', 'gdexmod'])
+   show_setup_guide(object, 'rda_python_miscs', ['gdexcp', 'gdexdrop', 'gdexkill', 'gdexmod'])
    object.read_parameters()
    object.start_actions()
    object.pgexit(0)

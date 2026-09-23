@@ -1,0 +1,77 @@
+
+ Copy local files and directories into a GDEX dataset directory so that they end
+ up owned by 'gdexdata'.  It is a restricted alternative to gdexcp, intended for
+ data providers who are not in the DECS group: the destination is always the
+ given dataset's directory, and the calling user must be granted that dataset in
+ the gdexdrop access list.
+
+ Usage: gdexdrop -ds DatasetID [-t TargetPath] [-i InputFile] [-O] [-h]  \
+               [-D DirectoryMode] [-F FileMode] File/Directory List
+
+      - Option -ds DatasetID is mandatory.  It names the dataset to drop the
+          files into, in the form d123456.  The files are copied under
+          /glade/campaign/collections/gdex/data/DatasetID, which must already
+          exist;
+
+      - Option -t TargetPath, sub-path under the dataset directory to drop the
+          files into.  Missing sub-directories are created.  The path must stay
+          inside the dataset directory; '..' components and symbolic links
+          leading out of it are rejected.  Defaults to the dataset directory
+          itself;
+
+      - Option -f File/Directory List is the default option, so the source paths
+          may be given without it and in any position.  Relative paths are
+          resolved against the current directory.  A directory is copied
+          recursively, as the directory itself;
+
+      - Option -i InputFile, read additional source paths from a file, one per
+          line.  Blank lines and lines starting with '#' are ignored;
+
+      - Option -O, override an existing target file of the same size.  Without
+          it such a file is left alone and the copy is skipped;
+
+      - Option -D DirectoryMode, permission mode for created directories in
+          octal notation.  Defaults to 775;
+
+      - Option -F FileMode, permission mode for copied files in octal notation.
+          Defaults to 664;
+
+      - Option -h, display this help document.
+
+  Every source path must be readable by the calling user, not merely by
+  'gdexdata'; a path the caller cannot read themselves is refused.  Copied files
+  and directories are owned by 'gdexdata'.
+
+  Access List
+  -----------
+
+  The access list is /glade/u/home/gdexdata/config/gdexdrop.conf.  It must be
+  owned by 'gdexdata' and must not be writable by group or others.  Each line
+  is a login name, a colon, and the colon-separated dataset IDs that login may
+  drop into, or 'all' for every dataset.  '#' starts a comment:
+
+      # login: dsid1[:...:dsidn]
+      jdoe: d123456:d654321
+      asmith: d111222
+      gdexhelp: all
+
+  A login absent from the list cannot drop into any dataset.  'gdexdata' itself
+  is always allowed and needs no entry.
+
+  Examples:
+
+    1. Drop two files into the top of a dataset directory:
+
+          gdexdrop -ds d123456 hourly.202601.nc hourly.202602.nc
+
+    2. Drop the same files into a sub-directory of the dataset:
+
+          gdexdrop -ds d123456 -t 2026/monthly hourly.2026*.nc
+
+    3. Drop a whole directory tree, replacing files already there:
+
+          gdexdrop -ds d123456 -t archive -O /path/to/mydir
+
+    4. Drop a long list of files named in a file, with group-writable modes:
+
+          gdexdrop -ds d123456 -i filelist.txt -F 664 -D 775
