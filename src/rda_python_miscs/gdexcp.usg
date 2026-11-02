@@ -44,10 +44,14 @@
 
    -fh FromHostName     host name where the source files reside.
    -th ToHostName       host name where the target files are written.
-   -fb FromBucket       Object Store bucket name for the source files.
-   -tb ToBucket         Object Store bucket name for the target files.
-   -fp FromGlobusEndpoint   Globus endpoint for the source files.
-   -tp ToGlobusEndpoint     Globus endpoint for the target files.
+   -fb FromBucket       Object Store bucket name for the source files; implies
+                        the Object Store as the source host (no -fh needed).
+   -tb ToBucket         Object Store bucket name for the target files; implies
+                        the Object Store as the target host (no -th needed).
+   -fp FromGlobusEndpoint   Globus endpoint for the source files; implies the
+                            endpoint's host as the source (no -fh needed).
+   -tp ToGlobusEndpoint     Globus endpoint for the target files; implies the
+                            endpoint's host as the target (no -th needed).
 
 
  COPY BEHAVIOR
