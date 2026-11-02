@@ -254,12 +254,47 @@ class GdexCp(PgFile):
          self.CINFO['fpath'] = (file if dosub else op.dirname(file)) + "/"
          if info['isfile']:
             self.CINFO['tcnt'] += self.dispatch_copy(file, info)
+         elif self.RDACP['r'] and self.can_upload_directory():
+            self.CINFO['tcnt'] += self.upload_directory(file, dosub)
          elif dosub or self.RDACP['R']:
             flist = self.gdex_glob(file, self.RDACP['fh'], 0, self.LGWNEX)
             if flist: self.copy_list(flist, 1, file)
          else:
             self.pglog("{}{}: Add option -r to copy directory".format(self.CINFO['fhost'], file), self.LGEREX)
    
+   # check if a local directory can go to the Object Store in one recursive upload
+   def can_upload_directory(self):
+      """Return True when a -r directory copy can be one recursive Object Store upload.
+
+      Needs a local source, an Object Store target and a key prefix from -t; with
+      the default target '.' the keys would start with '/', so such a copy goes
+      file by file instead.
+      """
+      if self.RDACP['fh'] or not self.RDACP['th']: return False
+      if self.pgcmp(self.strip_host_name(self.RDACP['th']), self.OHOST, 1): return False
+      return (self.CINFO['tpath'] != '.')
+
+   # upload a local directory to the Object Store in one recursive call
+   def upload_directory(self, fromdir, dosub):
+      """Upload a whole local directory to the Object Store with one isd_s3_cli call.
+
+      The files keep their layout under the -t key prefix: with the trailing '/'
+      form (dosub) they land at '{prefix}/{relative path}', otherwise the directory
+      name is kept too, at '{prefix}/{dirname}/{relative path}', the same keys a
+      file-by-file copy gives.  -m is not used; isd_s3_cli uploads in parallel
+      threads of its own.
+
+      Args:
+         fromdir (str): Absolute source directory path.
+         dosub (int): 1 to upload the directory contents without the directory name.
+
+      Returns:
+         int: 1 if the directory was uploaded, 0 otherwise.
+      """
+      todir = self.CINFO['tpath'] if dosub else self.join_paths(self.CINFO['tpath'], op.basename(fromdir))
+      logact = self.LGWNEX | (self.OVRIDE if self.RDACP['O'] else 0)
+      return (1 if self.local_copy_object_directory(todir, fromdir, None, None, logact) else 0)
+
    # recursively copy directory/file
    def copy_list(self, tlist, level, cdir):
       """Recursively copy a directory listing up to the configured depth limit.
