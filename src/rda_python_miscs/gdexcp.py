@@ -135,6 +135,28 @@ class GdexCp(PgFile):
       self.dssdb_dbname()
       self.validate_decs_group('gdexcp', self.PGLOG['CURUID'], 1)
       if not self.RDACP['R'] and self.RDACP['r']: self.RDACP['R'] = 1000
+      # a bucket implies the Object Store host, so -tb/-fb need no -th/-fh
+      if self.RDACP['fb']:
+         self.PGLOG['OBJCTBKT'] = self.RDACP['fb']
+         if not self.RDACP['fh']:
+            self.RDACP['fh'] = self.OHOST
+            self.CINFO['fhost'] = self.OHOST + '-'
+      if self.RDACP['tb']:
+         if not self.RDACP['fb']: self.PGLOG['OBJCTBKT'] = self.RDACP['tb']
+         if not self.RDACP['th']:
+            self.RDACP['th'] = self.OHOST
+            self.CINFO['thost'] = self.OHOST + '-'
+      # a Globus endpoint implies its host, so -tp/-fp need no -th/-fh
+      if self.RDACP['fp']:
+         self.PGLOG['BACKUPEP'] = self.RDACP['fp']
+         if not self.RDACP['fh']:
+            self.RDACP['fh'] = self.endpoint_host(self.RDACP['fp'])
+            if self.RDACP['fh']: self.CINFO['fhost'] = self.RDACP['fh'] + '-'
+      if self.RDACP['tp']:
+         if not self.RDACP['fp']: self.PGLOG['BACKUPEP'] = self.RDACP['tp']
+         if not self.RDACP['th']:
+            self.RDACP['th'] = self.endpoint_host(self.RDACP['tp'])
+            if self.RDACP['th']: self.CINFO['thost'] = self.RDACP['th'] + '-'
       if not self.RDACP['t']:
          self.CINFO['tpath'] = self.RDACP['t'] = "."
       else:
@@ -151,14 +173,6 @@ class GdexCp(PgFile):
          self.pglog("{}{}: Cannot copy multiple files to a single file".format(self.CINFO['thost'], self.RDACP['t']), self.LGEREX)
       if self.RDACP['th'] and self.RDACP['fh'] and self.RDACP['th'] == self.RDACP['fh'] and self.RDACP['fh'] != 'HPSS':
          self.pglog(self.RDACP['fh'] + ": Cannot copy file onto the same host", self.LGEREX)
-      if self.RDACP['fb']:
-         self.PGLOG['OBJCTBKT'] = self.RDACP['fb']
-      elif self.RDACP['tb']:
-         self.PGLOG['OBJCTBKT'] = self.RDACP['tb']
-      if self.RDACP['fp']:
-         self.PGLOG['BACKUPEP'] = self.RDACP['fp']
-      elif self.RDACP['tp']:
-         self.PGLOG['BACKUPEP'] = self.RDACP['tp']
       if self.RDACP['o']:
          if not self.RDACP['fp']:
             self.pglog("-o: works only when source Globus endpoint -fp is provided", self.LGEREX)
@@ -185,6 +199,27 @@ class GdexCp(PgFile):
          self.pglog("{}: No File copied{}".format((self.CINFO['fpath'] if self.CINFO['fpath'] else self.CINFO['curdir']), hinfo), self.LOGWRN)
       self.cmdlog()
    
+   # get the host name a Globus endpoint is reached by
+   def endpoint_host(self, endpoint):
+      """Return the host name that copy_gdex_file() routes a Globus endpoint through.
+
+      Known endpoints map through QHOSTS: 'gdex-quasar' to the Quasar backup host,
+      'gdex-quasar-drdata' to the DRDATA host, and 'gdex-glade' to the local host
+      (returned as None, the default).  Any other endpoint is routed as the Quasar
+      backup host with QPOINTS['B'] pointed at it.
+
+      Args:
+         endpoint (str): Globus endpoint name from -fp or -tp.
+
+      Returns:
+         str | None: Host name for -fh/-th, or None for the local host.
+      """
+      host = self.QHOSTS.get(endpoint)
+      if host is None:
+         self.QPOINTS['B'] = endpoint
+         host = self.BHOST
+      return (None if host == self.LHOST else host)
+
    # copy the top level list
    def copy_top_list(self, files):
       """Iterate the top-level source paths and initiate copies or recursive traversal.
