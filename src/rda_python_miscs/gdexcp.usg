@@ -57,6 +57,12 @@
  COPY BEHAVIOR
 
    -r     Copy directories and files recursively, with no depth limit.
+          A local directory copied to an Object Store bucket (-tb) with -r and a
+          -t key prefix is uploaded in a single isd_s3_cli call, which uploads
+          in parallel threads of its own (-m is not used for it).  Its files
+          keep their layout under the prefix.  The directory is skipped when
+          all its files are already in the bucket at the same size; otherwise
+          the whole directory is uploaded again.
 
    -R  RecursiveLevel
           Copy recursively up to the given depth.  -R 1 copies only the
