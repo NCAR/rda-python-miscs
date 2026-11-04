@@ -45,7 +45,6 @@ class GdexDrop(PgFile):
          'f': [],      # from file/directory names
          'i': None,    # input file holding a list of from file names, one per line
          't': None,    # sub-path under the dataset directory to drop the files into
-         'O': 0,       # 1 to override an existing target file of the same size
          'F': 0o664,   # to file mode, default to 664
          'D': 0o775,   # to directory mode, default to 775
       }
@@ -60,8 +59,7 @@ class GdexDrop(PgFile):
       """Parse command-line arguments, verify read access, then switch to 'gdexdata'.
 
       The default option is -f (source paths); positional arguments are treated
-      as source paths wherever they appear.  -O is a boolean flag; -F and -D take
-      octal modes.  The source access check must run before set_suid(), while the
+      as source paths wherever they appear.  -F and -D take octal modes.  The source access check must run before set_suid(), while the
       real user ID is still the caller, so that os.access() reports what the
       CALLER can read rather than what 'gdexdata' can read.
       """
@@ -79,9 +77,6 @@ class GdexDrop(PgFile):
          if ms:
             option = ms.group(1)
             if option not in self.DROP: self.pglog(arg + ": Unknown Option", self.LGEREX)
-            if option == 'O':
-               self.DROP[option] = 1
-               option = defopt
             continue
          if not option: self.pglog(arg + ": Value provided without option", self.LGEREX)
          if option == 'f':
@@ -322,7 +317,7 @@ class GdexDrop(PgFile):
       """Copy one source file or directory into the target directory.
 
       A directory is copied recursively, as the directory itself.  An existing
-      target file of the same size is left alone unless -O is given.
+      target file of the same size is always left alone.
 
       Args:
          file (str): Source path as given on the command line.
@@ -336,7 +331,7 @@ class GdexDrop(PgFile):
       if not finfo:
          return self.pglog("{}: {}".format(file, self.PGLOG['MISSFILE']), self.LOGERR)
       tofile = self.confine_path(op.join(self.DINFO['target'], op.basename(path)), self.DINFO['target'])
-      if finfo['isfile'] and not self.DROP['O']:
+      if finfo['isfile']:
          tinfo = self.check_local_file(tofile, 0, self.LOGWRN)
          if tinfo and tinfo['data_size'] == finfo['data_size']:
             self.pglog(tofile + ": Target exists with same size, skip copying", self.LOGWRN)
