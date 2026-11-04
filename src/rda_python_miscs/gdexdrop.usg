@@ -5,7 +5,7 @@
  given dataset's directory, and the calling user must be granted that dataset in
  the gdexdrop access list.
 
- Usage: gdexdrop -ds DatasetID [-t TargetPath] [-i InputFile] [-O] [-h]  \
+ Usage: gdexdrop -ds DatasetID [-t TargetPath] [-i InputFile] [-h]  \
                [-D DirectoryMode] [-F FileMode] File/Directory List
 
       - Option -ds DatasetID is mandatory.  It names the dataset to drop the
@@ -27,13 +27,11 @@
       - Option -f File/Directory List is the default option, so the source paths
           may be given without it and in any position.  Relative paths are
           resolved against the current directory.  A directory is copied
-          recursively, as the directory itself;
+          recursively, as the directory itself.  A source file whose target
+          already exists with the same size is skipped;
 
       - Option -i InputFile, read additional source paths from a file, one per
           line.  Blank lines and lines starting with '#' are ignored;
-
-      - Option -O, override an existing target file of the same size.  Without
-          it such a file is left alone and the copy is skipped;
 
       - Option -D DirectoryMode, permission mode for created directories in
           octal notation.  Defaults to 775;
@@ -75,9 +73,9 @@
 
           gdexdrop -ds d123456 -t 2026/monthly hourly.2026*.nc
 
-    3. Drop a whole directory tree, replacing files already there:
+    3. Drop a whole directory tree:
 
-          gdexdrop -ds d123456 -t archive -O /path/to/mydir
+          gdexdrop -ds d123456 -t archive /path/to/mydir
 
     4. Drop a long list of files named in a file, with group-writable modes:
 
