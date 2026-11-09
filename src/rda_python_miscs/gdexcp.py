@@ -187,7 +187,7 @@ class GdexCp(PgFile):
          self.cmdlog()
          return
       if self.RDACP['m'] > 1:
-         self.start_none_daemon('gdexcp', '', self.PGLOG['CURUID'], self.RDACP['m'], 30)
+         self.start_none_daemon('gdexcp', '', self.PGLOG['CURUID'], self.RDACP['m'], 60)   # 60s caps the adaptive wait
       self.copy_top_list(self.RDACP['f'])
       if self.RDACP['m'] > 1: self.check_child(None, 0, self.LOGWRN, 1)
       hinfo = ''
